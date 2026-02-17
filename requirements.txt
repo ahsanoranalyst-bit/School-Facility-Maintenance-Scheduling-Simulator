@@ -11,6 +11,8 @@ pandas
 pyairtable
 uv
 openpyxl
+plotly
+
 
 
 
