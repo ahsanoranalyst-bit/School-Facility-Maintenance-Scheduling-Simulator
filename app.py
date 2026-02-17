@@ -1,209 +1,173 @@
+
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
 from fpdf import FPDF
 
 # --- 1. CONFIGURATION & AUTH (Professional Framework) ---
 MASTER_KEY = "Ahsan123"
-PROJECT_ID = "INV_SMART_2026"
+PROJECT_ID = "FAC_MAINT_2026"
 
-st.set_page_config(page_title="Professional Inventory Forecaster", layout="wide", page_icon="🏢")
+st.set_page_config(page_title="Facility Maintenance Suite", layout="wide", page_icon="🛠️")
 
 if 'auth' not in st.session_state: st.session_state.auth = False
-if 'school_name' not in st.session_state: st.session_state.school_name = ""
+if 'org_name' not in st.session_state: st.session_state.org_name = ""
 
-# --- LOGIN SYSTEM ---
+# --- ACCESS CONTROL SYSTEM ---
 if not st.session_state.auth:
-    st.title("🛡️ System Activation")
+    st.title("🛡️ Secure System Activation")
     auth_key = st.text_input("Enter License Key", type="password")
-    if st.button("Unlock System", use_container_width=True):
+    if st.button("Unlock Management Suite", use_container_width=True):
         if auth_key == MASTER_KEY:
             st.session_state.auth = True
             st.rerun()
-        else: st.error("Invalid Key!")
+        else: st.error("Invalid Key! Access Denied.")
     st.stop()
 
-if st.session_state.auth and not st.session_state.school_name:
-    st.title("🏫 Organization Registration")
-    s_name = st.text_input("Enter Organization Name")
-    if st.button("Register & Proceed"):
-        st.session_state.school_name = s_name
-        st.rerun()
+if st.session_state.auth and not st.session_state.org_name:
+    st.title("🏫 Institution Registration")
+    o_name = st.text_input("Enter School/Organization Name")
+    if st.button("Register & Initialize"):
+        if o_name:
+            st.session_state.org_name = o_name
+            st.rerun()
+        else: st.warning("Organization name is required.")
     st.stop()
 
-# --- 2. SIDEBAR (Professional Controls) ---
+# --- 2. PROFESSIONAL SIDEBAR ---
 with st.sidebar:
-    st.title(f"🏢 {st.session_state.school_name}")
-    st.info(f"Project ID: {PROJECT_ID}")
-   
-    with st.expander("📈 Forecast Controls", expanded=True):
-        multiplier = 1.8 if st.checkbox("Peak Season?") else 1.0
-        lead_buffer = st.slider("Lead Time Buffer (Days)", 0, 15, 3)
+    st.title(f"🏢 {st.session_state.org_name}")
+    st.info(f"System ID: {PROJECT_ID}")
+    st.divider()
 
-    with st.expander("💰 Financial Settings", expanded=True):
-        # Guideline: Profit level 1 to 200
-        profit_percent = st.slider("Profit Markup (%)", 1, 200, 20)
-        budget_cap = st.number_input("Total Budget Limit", 1000, 10000000, 500000)
+    with st.expander("💰 Financial Parameters", expanded=True):
+        labor_rate = st.number_input("Labor Charge ($/hr)", 10, 200, 45)
+        parts_markup = st.slider("Parts Buffer (%)", 0, 50, 15) / 100
 
-    if st.button("🔴 Logout", use_container_width=True):
+    with st.expander("📞 Emergency Network", expanded=False):
+        st.text_area("Vendor Contacts", "Electrician: 555-0101\nPlumber: 555-0202\nIT Support: 555-0303", height=100)
+
+    st.divider()
+    if st.button("🔴 Secure Logout", use_container_width=True):
         for key in list(st.session_state.keys()): del st.session_state[key]
         st.rerun()
 
-# --- 3. PROFESSIONAL PDF GENERATOR ---
-def generate_pdf(data_list, report_type, stats=None):
+# --- 3. AUDIT REPORT GENERATOR (PDF) ---
+def generate_audit_pdf(data_list, stats):
     pdf = FPDF()
     pdf.add_page()
-   
-    # Professional Header Band
+    
+    # Header Band
     pdf.set_fill_color(31, 73, 125)
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 12, st.session_state.school_name.upper(), ln=True, align='C')
+    pdf.cell(0, 15, st.session_state.org_name.upper(), ln=True, align='C')
     pdf.set_font("Arial", '', 10)
-    pdf.cell(0, 8, f"{report_type} REPORT - Generated on {datetime.now().strftime('%Y-%m-%d %H:%M')}", ln=True, align='C')
-    pdf.ln(20)
+    pdf.cell(0, 5, f"FACILITY AUDIT REPORT - {datetime.now().strftime('%Y-%m-%d')}", ln=True, align='C')
+    pdf.ln(25)
 
-    if report_type == "ADMIN" and stats:
-        pdf.set_text_color(0, 0, 0)
-        pdf.set_font("Arial", 'B', 11)
-        pdf.set_fill_color(240, 240, 240)
-        pdf.cell(0, 10, " EXECUTIVE FINANCIAL SUMMARY", 0, 1, 'L', True)
-        pdf.set_font("Arial", '', 10)
-        pdf.ln(2)
-        pdf.cell(63, 8, f" Total Investment: {stats['total_p']:,.0f}", 0, 0)
-        pdf.cell(63, 8, f" Est. Net Profit: {stats['total_e']:,.0f}", 0, 0)
-        pdf.cell(63, 8, f" Remaining Budget: {stats['rem']:,.0f}", 0, 1)
-        pdf.ln(5)
+    # Executive Summary
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(0, 10, " EXECUTIVE FINANCIAL SUMMARY", 0, 1, 'L', True)
+    pdf.set_font("Arial", '', 10)
+    pdf.ln(2)
+    pdf.cell(90, 8, f" Total Facility Risk Value: ${stats['total_risk']:,.2f}", 0, 1)
+    pdf.cell(90, 8, f" Labor Rate: ${labor_rate}/hr", 0, 1)
+    pdf.ln(5)
 
+    # Table Header
     pdf.set_fill_color(51, 122, 183)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 9)
-   
-    if report_type == "ADMIN":
-        cols = [("Item", 55), ("Stock", 15), ("Score", 20), ("Cost", 30), ("Profit", 30), ("Total", 40)]
-    else:
-        cols = [("Item Name", 90), ("Order Qty", 40), ("Unit Price", 30), ("Subtotal", 30)]
-
+    cols = [("Asset Name", 70), ("Quantity", 30), ("Age", 20), ("Risk Cost", 40), ("Status", 30)]
     for txt, w in cols: pdf.cell(w, 10, txt, 1, 0, 'C', True)
     pdf.ln()
 
+    # Table Data
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", '', 8)
-    for item in data_list:
-        if report_type == "VENDOR" and "REORDER" not in item['Status']: continue
-        if report_type == "ADMIN":
-            pdf.cell(55, 8, str(item['Item']), 1)
-            pdf.cell(15, 8, str(item['Stock']), 1, 0, 'C')
-            pdf.cell(20, 8, f"{item['Score']}%", 1, 0, 'C')
-            pdf.cell(30, 8, f"{item['Purchase_Cost']:,.0f}", 1, 0, 'R')
-            pdf.cell(30, 8, f"{item['Profit']:,.0f}", 1, 0, 'R')
-            pdf.cell(40, 8, f"{item['Revenue']:,.0f}", 1, 1, 'R')
-        else:
-            pdf.cell(90, 8, str(item['Item']), 1)
-            pdf.cell(40, 8, str(item['MOQ']), 1, 0, 'C')
-            pdf.cell(30, 8, f"{item['Unit_Price']:,.0f}", 1, 0, 'R')
-            pdf.cell(30, 8, f"{item['Purchase_Cost']:,.0f}", 1, 1, 'R')
-           
+    pdf.set_font("Arial", '', 9)
+    for _, row in data_list.iterrows():
+        pdf.cell(70, 8, str(row['Asset']), 1)
+        pdf.cell(30, 8, str(row['Qty']), 1, 0, 'C')
+        pdf.cell(20, 8, str(row['Avg Age (Yrs)']), 1, 0, 'C')
+        pdf.cell(40, 8, f"${row['Est. Repair Cost']:,.2f}", 1, 0, 'R')
+        pdf.cell(30, 8, "Exp" if row['Warranty'] == "Expired" else "Active", 1, 1, 'C')
+        
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 4. DATA INITIALIZATION (Strictly your 2nd Code Data) ---
-if 'inventory_data' not in st.session_state:
-    st.session_state.inventory_data = pd.DataFrame(columns=["Item", "Current Qty", "Damage Rate (%)", "Unit Cost", "MOQ", "Lead Time"])
+# --- 4. DATA OPS ---
+if 'assets' not in st.session_state:
+    st.session_state.assets = pd.DataFrame([
+        {"Asset": "Air Conditioners", "Qty": 20, "Avg Age (Yrs)": 3, "Last Service": "2023-10-01", "Warranty": "2025-01-01"},
+        {"Asset": "Computers", "Qty": 50, "Avg Age (Yrs)": 2, "Last Service": "2024-01-15", "Warranty": "2025-06-01"},
+        {"Asset": "Plumbing System", "Qty": 1, "Avg Age (Yrs)": 15, "Last Service": "2022-05-20", "Warranty": "Expired"},
+        {"Asset": "Ceiling Fans", "Qty": 100, "Avg Age (Yrs)": 5, "Last Service": "2023-08-10", "Warranty": "Expired"}
+    ])
 
-tabs = st.tabs(["📋 Management", "📊 Analytics", "💰 Financials"])
+tabs = st.tabs(["📋 Asset Inventory", "📅 Maintenance Schedule", "📊 Risk Analytics"])
 
-# --- TAB 1: MANAGEMENT (Your Form and Data Editor) ---
+# --- TAB 1: ASSET MANAGEMENT ---
 with tabs[0]:
-    with st.expander("➕ Manual Entry Form", expanded=False):
-        with st.form("manual_entry", clear_on_submit=True):
-            c1, c2, c3 = st.columns(3)
-            f_item = c1.text_input("Item Name")
-            f_qty = c2.number_input("Current Qty", 0)
-            f_dmg = c3.number_input("Damage %", 0, 100, 2)
-            c4, c5, c6 = st.columns(3)
-            f_cst = c4.number_input("Unit Cost", 0)
-            f_moq = c5.number_input("MOQ", 1)
-            f_led = c6.number_input("Lead Days", 1)
-            if st.form_submit_button("Add Item"):
-                if f_item:
-                    new_df = pd.DataFrame([{"Item": f_item, "Current Qty": f_qty, "Damage Rate (%)": f_dmg, "Unit Cost": f_cst, "MOQ": f_moq, "Lead Time": f_led}])
-                    st.session_state.inventory_data = pd.concat([st.session_state.inventory_data, new_df], ignore_index=True)
-                    st.rerun()
+    st.subheader("Asset Health & Documentation")
+    edited_assets = st.data_editor(st.session_state.assets, num_rows="dynamic", use_container_width=True)
+    st.session_state.assets = edited_assets
 
-    uploaded_file = st.file_uploader("📂 Bulk Import Excel", type=["xlsx", "xls"])
-    if uploaded_file:
-        st.session_state.inventory_data = pd.read_excel(uploaded_file)
-
-    st.subheader("Inventory Ledger")
-    st.session_state.inventory_data = st.data_editor(st.session_state.inventory_data, num_rows="dynamic", use_container_width=True)
-
-# --- CALCULATION ENGINE ---
-results = []
-for _, row in st.session_state.inventory_data.iterrows():
-    p_cost = row['MOQ'] * row['Unit Cost']
-    profit = p_cost * (profit_percent / 100)
-    rev = p_cost + profit
-   
-    rop = (row['Current Qty'] * 0.05 * multiplier) * (row['Lead Time'] + lead_buffer)
-    # Predictive Score (Point 5 from guidelines)
-    score = round((min(row['Current Qty']/(rop*2 if rop>0 else 1), 1.0)*100)*(1-(row['Damage Rate (%)']/100)), 1)
-   
-    results.append({
-        "Item": row['Item'], "Stock": row['Current Qty'], "Score": score,
-        "Status": "🚨 REORDER" if row['Current Qty'] <= rop else "✅ HEALTHY",
-        "Purchase_Cost": p_cost, "Profit": profit, "Revenue": rev,
-        "MOQ": row['MOQ'], "Unit_Price": row['Unit Cost']
-    })
-res_df = pd.DataFrame(results)
-
-# --- TAB 2: ANALYTICS ---
+# --- TAB 2: SCHEDULING ---
 with tabs[1]:
-    if not res_df.empty:
-        st.subheader("Smart Insights")
-        g1, g2 = st.columns(2)
-        with g1:
-            st.markdown("**Profit vs Cost Analysis**")
-            st.bar_chart(res_df.set_index('Item')[['Purchase_Cost', 'Profit']])
-        with g2:
-            st.markdown("**Inventory Score Comparison**")
-            st.line_chart(res_df.set_index('Item')['Score'])
-       
-        st.divider()
-        st.subheader("Predictive Score Matrix") # 5th point
-        m_cols = st.columns(3)
-        for i, row in res_df.iterrows():
-            with m_cols[i % 3]:
-                st.metric(row['Item'], f"{row['Score']}%", delta=row['Status'], delta_color="normal" if "HEALTHY" in row['Status'] else "inverse")
-    else: st.info("No data available for analytics.")
+    st.subheader("Routine Inspection Forecast")
+    today = datetime.today()
+    schedule_list = []
+   
+    for _, row in edited_assets.iterrows():
+        try:
+            last_dt = datetime.strptime(row['Last Service'], "%Y-%m-%d")
+            interval = 180 if row['Avg Age (Yrs)'] > 5 else 365
+            next_service = last_dt + timedelta(days=interval)
+            days_until = (next_service - today).days
+            
+            schedule_list.append({
+                "Asset": row['Asset'],
+                "Next Inspection": next_service.strftime("%Y-%m-%d"),
+                "Days Remaining": days_until,
+                "Urgency": "🚨 High Priority" if days_until < 15 else "✅ Normal"
+            })
+        except: continue
+   
+    st.dataframe(pd.DataFrame(schedule_list), use_container_width=True)
 
-# --- TAB 3: FINANCIALS ---
+# --- TAB 3: FINANCIAL RISK (Section D & Predictive Score) ---
 with tabs[2]:
-    if not res_df.empty:
-        t_p = res_df['Purchase_Cost'].sum()
-        t_e = res_df['Profit'].sum()
-        t_r = res_df['Revenue'].sum()
-        rem = budget_cap - t_r
+    st.subheader("Projected Maintenance Expenditure")
+    
+    risk_df = edited_assets.copy()
+    risk_df['Risk Factor'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.5 if x == "Expired" else 1.0)
+    risk_df['Est. Repair Cost'] = (risk_df['Risk Factor'] * 100) * (1 + parts_markup)
+    
+    # 5. Predictive Maintenance Score (As per guideline)
+    risk_df['Maintenance Score'] = (100 - (risk_df['Risk Factor'] * 5)).clip(lower=0)
 
-        st.subheader("Executive Summary")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Total Investment", f"{t_p:,.0f}")
-        c2.metric("Projected Profit", f"{t_e:,.0f}", f"{profit_percent}% Markup")
-        c3.metric("Projected Revenue", f"{t_r:,.0f}")
+    total_risk = risk_df['Est. Repair Cost'].sum()
+    
+    c1, c2 = st.columns([1, 2])
+    with c1:
+        st.metric("Total Facility Risk Value", f"${total_risk:,.2f}")
+        st.divider()
+        st.write("**Asset Condition (Predictive Score)**")
+        for _, r in risk_df.iterrows():
+            st.write(f"{r['Asset']}: {r['Maintenance Score']}%")
+            st.progress(r['Maintenance Score']/100)
 
-        st.divider()
-        b1, b2 = st.columns(2)
-        b1.metric("Budget Limit", f"{budget_cap:,.0f}")
-        b2.metric("Balance Remaining", f"{rem:,.0f}", delta_color="normal" if rem >= 0 else "inverse")
-        
-        st.divider()
-        st.subheader("Export Center")
-        d1, d2 = st.columns(2)
-        audit_stats = {'total_p': t_p, 'total_e': t_e, 'rem': rem}
-        admin_pdf = generate_pdf(results, "ADMIN", stats=audit_stats)
-        d1.download_button("📥 Export Admin Audit", admin_pdf, "Admin_Audit.pdf", use_container_width=True)
-       
-        vendor_pdf = generate_pdf(results, "VENDOR")
-        d2.download_button("📦 Export Vendor Order", vendor_pdf, "Purchase_Order.pdf", use_container_width=True)
-    else: st.info("Financial reports will be generated after data entry.")
+    with c2:
+        st.bar_chart(risk_df.set_index("Asset")["Est. Repair Cost"])
+
+    st.divider()
+    st.subheader("Executive Exports")
+    report_stats = {'total_risk': total_risk}
+    pdf_data = generate_audit_pdf(risk_df, report_stats)
+    st.download_button("📥 Download Executive Audit Report", pdf_data, "Facility_Audit.pdf", use_container_width=True)
