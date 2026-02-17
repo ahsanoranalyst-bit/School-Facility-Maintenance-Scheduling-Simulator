@@ -7,19 +7,18 @@ from datetime import datetime, timedelta
 from fpdf import FPDF
 import plotly.express as px
 
-# --- 1. GLOBAL CONFIGURATION & BRANDING ---
+# --- 1. GLOBAL CONFIGURATION ---
 MASTER_KEY = "Ahsan123"
 PROJECT_ID = "PK_FACILITY_PRO_2026"
 
 st.set_page_config(page_title="Facility Intelligence Suite", layout="wide", page_icon="🏢")
 
-# Professional Blue Theme Styling
+# Custom CSS for Blue Theme
 st.markdown("""
     <style>
     .main { background-color: #f4f7f9; }
     .stMetric { background-color: #ffffff; padding: 20px; border-radius: 12px; border-bottom: 4px solid #1f4e79; }
-    .stTabs [data-baseweb="tab-list"] { gap: 10px; }
-    .stTabs [data-baseweb="tab"] { background-color: #e1e4e8; border-radius: 5px; padding: 10px 25px; }
+    .sidebar .sidebar-content { background-image: linear-gradient(#1f4e79, #2e75b6); color: white; }
     .stTabs [aria-selected="true"] { background-color: #1f4e79 !important; color: white !important; }
     </style>
     """, unsafe_allow_html=True)
@@ -31,143 +30,136 @@ if 'org_name' not in st.session_state: st.session_state.org_name = ""
 if not st.session_state.auth:
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
-        st.title("🛡️ System Activation")
-        key = st.text_input("Enter License Key", type="password")
-        if st.button("Unlock Portal", use_container_width=True):
+        st.title("🛡️ Secure Portal Activation")
+        key = st.text_input("License Key", type="password")
+        if st.button("Unlock System", use_container_width=True):
             if key == MASTER_KEY:
                 st.session_state.auth = True
                 st.rerun()
-            else: st.error("Invalid Activation Key.")
     st.stop()
 
 if st.session_state.auth and not st.session_state.org_name:
     col1, col2, col3 = st.columns([1, 1.5, 1])
     with col2:
         st.title("🏫 Institution Registration")
-        o_name = st.text_input("Enter Organization Name")
-        if st.button("Complete Setup"):
-            if o_name:
-                st.session_state.org_name = o_name
-                st.rerun()
+        o_name = st.text_input("Enter School/Organization Name")
+        if st.button("Initialize Workspace"):
+            if o_name: st.session_state.org_name = o_name; st.rerun()
     st.stop()
 
-# --- 3. BLUE THEME PDF ENGINE ---
-class FacilityPDF(FPDF):
+# --- 3. PROFESSIONAL SIDEBAR (MENU BAR) ---
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/3062/3062410.png", width=70)
+    st.title(f"{st.session_state.org_name}")
+    st.caption(f"Project ID: {PROJECT_ID} [cite: 2026-01-24]")
+    
+    st.divider()
+    
+    st.subheader("⚙️ Maintenance Controls")
+    labor_rate = st.number_input("Labor Rate (PKR/hr)", 100, 10000, 1500)
+    # Profit level scale 1 to 200 [cite: 2025-12-29]
+    profit_scale = st.slider("Profit Level Scaling", 1, 200, 20) 
+    
+    st.divider()
+    
+    st.subheader("🚐 Logistics Management")
+    # Driver management based on distance requirements [cite: 2026-02-12]
+    st.info("Pick-up: Furthest First | Drop-off: Nearest First [cite: 2026-02-12]")
+    km_rate = st.number_input("Timing per KM (Mins)", 1, 60, 5) # [cite: 2026-02-10]
+    
+    st.divider()
+    
+    if st.button("🔴 Secure Logout", use_container_width=True):
+        for key in list(st.session_state.keys()): del st.session_state[key]
+        st.rerun()
+
+# --- 4. PDF ENGINE (BLUE THEME) ---
+class CorporatePDF(FPDF):
     def header(self):
-        self.set_fill_color(31, 78, 121) # Corporate Blue
+        self.set_fill_color(31, 78, 121) 
         self.rect(0, 0, 210, 35, 'F')
         self.set_text_color(255, 255, 255)
         self.set_font("Arial", 'B', 18)
         self.cell(0, 10, st.session_state.org_name.upper(), ln=True, align='C')
-        self.set_font("Arial", '', 10)
-        self.cell(0, 5, "Institutional Maintenance & Risk Audit", ln=True, align='C')
         self.ln(20)
 
-def generate_multi_report(df, r_type, stats):
-    pdf = FacilityPDF()
+def generate_report(df, r_type):
+    pdf = CorporatePDF()
     pdf.add_page()
-    pdf.set_text_color(0, 0, 0)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, f"Report: {r_type}", ln=True)
     
-    pdf.set_font("Arial", 'B', 14)
-    titles = {"ADMIN": "EXECUTIVE AUDIT", "SUMMARY": "INSTITUTIONAL SUMMARY", "ORDER": "PURCHASE ORDER"}
-    pdf.cell(0, 10, titles[r_type], ln=True, align='L')
-    pdf.set_font("Arial", 'I', 9)
-    pdf.cell(0, 5, f"Date: {datetime.now().strftime('%Y-%m-%d')}", ln=True)
-    pdf.ln(5)
-
-    pdf.set_fill_color(46, 117, 182) # Header Blue
+    pdf.set_fill_color(46, 117, 182)
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 9)
-    
-    if r_type == "ORDER":
-        cols = [("Asset Item", 90), ("Qty", 30), ("Status", 30), ("PKR Cost", 40)]
-    else:
-        cols = [("Asset Description", 60), ("Qty", 20), ("Risk (PKR)", 40), ("Health Score", 35), ("Next Date", 35)]
-
+    cols = [("Asset", 70), ("Qty", 20), ("Risk (PKR)", 40), ("Score", 30), ("Status", 30)]
     for txt, w in cols: pdf.cell(w, 10, txt, 1, 0, 'C', True)
     pdf.ln()
-
+    
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", '', 8)
     for _, row in df.iterrows():
-        if r_type == "ORDER" and row['Predictive Score'] > 50: continue
-        if r_type == "ORDER":
-            pdf.cell(90, 8, str(row['Asset']), 1)
-            pdf.cell(30, 8, str(row['Qty']), 1, 0, 'C')
-            pdf.cell(30, 8, "Urgent" if row['Predictive Score'] < 45 else "Routine", 1, 0, 'C')
-            pdf.cell(40, 8, f"{row['Est. Repair Cost']:,.0f}", 1, 1, 'R')
-        else:
-            pdf.cell(60, 8, str(row['Asset']), 1)
-            pdf.cell(20, 8, str(row['Qty']), 1, 0, 'C')
-            pdf.cell(40, 8, f"{row['Est. Repair Cost']:,.0f}", 1, 0, 'R')
-            pdf.cell(35, 8, f"{row['Predictive Score']}%", 1, 0, 'C')
-            pdf.cell(35, 8, str(row['Next_Service']), 1, 1, 'C')
-            
+        pdf.cell(70, 8, str(row['Asset']), 1)
+        pdf.cell(20, 8, str(row['Qty']), 1, 0, 'C')
+        pdf.cell(40, 8, f"{row['Repair Cost']:,.0f}", 1, 0, 'R')
+        pdf.cell(30, 8, f"{row['Predictive Score']}%", 1, 0, 'C')
+        pdf.cell(30, 8, "Critical" if row['Predictive Score'] < 50 else "Stable", 1, 1, 'C')
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 4. DATA LOGIC ---
+# --- 5. CORE LOGIC ---
 if 'assets' not in st.session_state:
     st.session_state.assets = pd.DataFrame([
-        {"Asset": "Air Conditioners", "Qty": 20, "Avg Age (Yrs)": 3, "Last Service": "2023-10-01", "Warranty": "2025-01-01"},
+        {"Asset": "AC Units", "Qty": 20, "Avg Age (Yrs)": 3, "Last Service": "2023-10-01", "Warranty": "2025-01-01"},
         {"Asset": "Computers", "Qty": 50, "Avg Age (Yrs)": 2, "Last Service": "2024-01-15", "Warranty": "2025-06-01"},
-        {"Asset": "Plumbing System", "Qty": 1, "Avg Age (Yrs)": 15, "Last Service": "2022-05-20", "Warranty": "Expired"}
+        {"Asset": "Generator", "Qty": 1, "Avg Age (Yrs)": 8, "Last Service": "2023-05-20", "Warranty": "Expired"}
     ])
 
-with st.sidebar:
-    st.title(f"🏢 {st.session_state.org_name}")
-    labor_rate = st.number_input("Labor Rate (Rs/hr)", 100, 5000, 1500)
-    parts_markup = st.slider("Parts Buffer (%)", 1, 200, 20) / 100 # Profit level 1-200 [cite: 2025-12-29]
-    if st.button("🔴 Logout"):
-        for key in list(st.session_state.keys()): del st.session_state[key]
-        st.rerun()
-
-tabs = st.tabs(["📋 Inventory Management", "📅 Service Schedule", "📊 Predictive Intelligence"])
+tabs = st.tabs(["📋 Inventory", "📅 Logistics", "📊 Predictive Intelligence"])
 
 with tabs[0]:
-    st.subheader("Asset Health Ledger")
-    up = st.file_uploader("📂 Import Excel", type=["xlsx"])
-    if up: st.session_state.assets = pd.read_excel(up)
+    st.subheader("Master Asset Ledger")
     st.session_state.assets = st.data_editor(st.session_state.assets, num_rows="dynamic", use_container_width=True)
 
 with tabs[1]:
-    st.subheader("Maintenance Forecast")
-    sched_df = st.session_state.assets.copy()
-    sched_df['Next_Service'] = sched_df.apply(lambda r: (pd.to_datetime(r['Last Service']) + timedelta(days=180 if r['Avg Age (Yrs)'] > 5 else 365)).date(), axis=1)
-    st.dataframe(sched_df[['Asset', 'Last Service', 'Next_Service']], use_container_width=True)
+    st.subheader("Driver Schedule & Route Timing")
+    # Logistics logic based on KM timings [cite: 2026-02-10]
+    log_df = pd.DataFrame([
+        {"Person": "Far Side Student", "Distance (KM)": 15, "Role": "Pick-up"},
+        {"Person": "Near Side Student", "Distance (KM)": 3, "Role": "Pick-up"}
+    ])
+    log_df['Est. Time (Mins)'] = log_df['Distance (KM)'] * km_rate
+    st.table(log_df)
 
 with tabs[2]:
     st.title("Predictive Risk Intelligence")
     
-    # 5. Predictive Score calculation [cite: 2026-02-14]
-    risk_df = sched_df.copy()
-    risk_df['Risk_F'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.7 if str(x).lower() == "expired" else 1.0)
-    risk_df['Est. Repair Cost'] = (risk_df['Risk_F'] * 5500) * (1 + parts_markup) * risk_df['Qty']
-    risk_df['Predictive Score'] = (100 - (risk_df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
+    # Advanced math for PKR risk and 5th point Score [cite: 2026-02-14]
+    df = st.session_state.assets.copy()
+    df['Risk_F'] = df['Avg Age (Yrs)'] * df['Warranty'].apply(lambda x: 1.7 if str(x).lower() == "expired" else 1.0)
+    df['Repair Cost'] = (df['Risk_F'] * 5000) * (1 + (profit_scale/100)) * df['Qty']
+    df['Predictive Score'] = (100 - (df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
 
     m1, m2, m3 = st.columns(3)
-    m1.metric("Total Asset Risk (PKR)", f"Rs. {risk_df['Est. Repair Cost'].sum():,.0f}")
-    m2.metric("Critical Assets", len(risk_df[risk_df['Predictive Score'] < 45]))
-    m3.metric("System Health", f"{int(risk_df['Predictive Score'].mean())}%")
+    m1.metric("Risk Exposure (PKR)", f"Rs. {df['Repair Cost'].sum():,.0f}")
+    m2.metric("Critical Items", len(df[df['Predictive Score'] < 50]))
+    m3.metric("System Health", f"{int(df['Predictive Score'].mean())}%")
 
     st.divider()
     
-    col_chart, col_health = st.columns([1.6, 1])
-    with col_chart:
-        st.write("### Executed Purchase & Repair Overview")
-        # Localized professional chart [cite: 2026-02-10]
-        fig = px.bar(risk_df, x='Asset', y='Est. Repair Cost', color='Predictive Score', color_continuous_scale='Blues', template="plotly_white")
+    
+    c_left, c_right = st.columns([1.6, 1])
+    with c_left:
+        st.subheader("Executed Purchase & Repair Overview")
+        fig = px.bar(df, x='Asset', y='Repair Cost', color='Predictive Score', color_continuous_scale='Blues')
         st.plotly_chart(fig, use_container_width=True)
     
-    with col_health:
-        st.write("### Health Score Breakdown")
-        for _, r in risk_df.iterrows():
+    with c_right:
+        st.subheader("Health Matrix Breakdown")
+        for _, r in df.iterrows():
             st.write(f"**{r['Asset']}**")
             st.progress(r['Predictive Score']/100)
-    
+
     st.divider()
-    st.subheader("📊 Document Export Center")
-    stats = {'total_pkr': risk_df['Est. Repair Cost'].sum(), 'total_units': risk_df['Qty'].sum()}
-    c1, c2, c3 = st.columns(3)
-    c1.download_button("📥 Admin Audit (Blue)", generate_multi_report(risk_df, "ADMIN", stats), "Admin_Audit.pdf", use_container_width=True)
-    c2.download_button("📥 Summary Report", generate_multi_report(risk_df, "SUMMARY", stats), "Summary.pdf", use_container_width=True)
-    c3.download_button("📋 Vendor Order", generate_multi_report(risk_df, "ORDER", stats), "Order.pdf", use_container_width=True)
+    
+    st.subheader("📊 Reports Export")
+    pdf_bytes = generate_report(df, "ADMIN AUDIT")
+    st.download_button("📥 Download Admin Audit (Blue)", pdf_bytes, "Audit.pdf", use_container_width=True)
