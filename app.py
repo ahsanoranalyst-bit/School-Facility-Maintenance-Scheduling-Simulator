@@ -4,11 +4,11 @@ import numpy as np
 from datetime import datetime
 from fpdf import FPDF
 
-# --- 1. CONFIGURATION & AUTH (Feature from Code 1) ---
+# --- 1. CONFIGURATION & AUTH (Professional Framework) ---
 MASTER_KEY = "Ahsan123"
 PROJECT_ID = "INV_SMART_2026"
 
-st.set_page_config(page_title="Professional Inventory Forecaster", layout="wide")
+st.set_page_config(page_title="Professional Inventory Forecaster", layout="wide", page_icon="🏢")
 
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'school_name' not in st.session_state: st.session_state.school_name = ""
@@ -32,7 +32,7 @@ if st.session_state.auth and not st.session_state.school_name:
         st.rerun()
     st.stop()
 
-# --- 2. SIDEBAR (Style from Code 1) ---
+# --- 2. SIDEBAR (Professional Controls) ---
 with st.sidebar:
     st.title(f"🏢 {st.session_state.school_name}")
     st.info(f"Project ID: {PROJECT_ID}")
@@ -42,8 +42,9 @@ with st.sidebar:
         lead_buffer = st.slider("Lead Time Buffer (Days)", 0, 15, 3)
 
     with st.expander("💰 Financial Settings", expanded=True):
+        # Guideline: Profit level 1 to 200
         profit_percent = st.slider("Profit Markup (%)", 1, 200, 20)
-        budget_cap = st.number_input("Total Budget Limit (PKR)", 1000, 10000000, 500000)
+        budget_cap = st.number_input("Total Budget Limit", 1000, 10000000, 500000)
 
     if st.button("🔴 Logout", use_container_width=True):
         for key in list(st.session_state.keys()): del st.session_state[key]
@@ -53,6 +54,8 @@ with st.sidebar:
 def generate_pdf(data_list, report_type, stats=None):
     pdf = FPDF()
     pdf.add_page()
+   
+    # Professional Header Band
     pdf.set_fill_color(31, 73, 125)
     pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
@@ -69,9 +72,9 @@ def generate_pdf(data_list, report_type, stats=None):
         pdf.cell(0, 10, " EXECUTIVE FINANCIAL SUMMARY", 0, 1, 'L', True)
         pdf.set_font("Arial", '', 10)
         pdf.ln(2)
-        pdf.cell(63, 8, f" Total Investment: PKR {stats['total_p']:,.0f}", 0, 0)
-        pdf.cell(63, 8, f" Est. Net Profit: PKR {stats['total_e']:,.0f}", 0, 0)
-        pdf.cell(63, 8, f" Remaining Budget: PKR {stats['rem']:,.0f}", 0, 1)
+        pdf.cell(63, 8, f" Total Investment: {stats['total_p']:,.0f}", 0, 0)
+        pdf.cell(63, 8, f" Est. Net Profit: {stats['total_e']:,.0f}", 0, 0)
+        pdf.cell(63, 8, f" Remaining Budget: {stats['rem']:,.0f}", 0, 1)
         pdf.ln(5)
 
     pdf.set_fill_color(51, 122, 183)
@@ -105,13 +108,13 @@ def generate_pdf(data_list, report_type, stats=None):
            
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 4. DATA INITIALIZATION (From Code 2) ---
+# --- 4. DATA INITIALIZATION (Strictly your 2nd Code Data) ---
 if 'inventory_data' not in st.session_state:
     st.session_state.inventory_data = pd.DataFrame(columns=["Item", "Current Qty", "Damage Rate (%)", "Unit Cost", "MOQ", "Lead Time"])
 
 tabs = st.tabs(["📋 Management", "📊 Analytics", "💰 Financials"])
 
-# --- TAB 1: MANAGEMENT ---
+# --- TAB 1: MANAGEMENT (Your Form and Data Editor) ---
 with tabs[0]:
     with st.expander("➕ Manual Entry Form", expanded=False):
         with st.form("manual_entry", clear_on_submit=True):
@@ -133,10 +136,10 @@ with tabs[0]:
     if uploaded_file:
         st.session_state.inventory_data = pd.read_excel(uploaded_file)
 
-    st.subheader("Inventory Records")
+    st.subheader("Inventory Ledger")
     st.session_state.inventory_data = st.data_editor(st.session_state.inventory_data, num_rows="dynamic", use_container_width=True)
 
-# --- CALCULATION ENGINE (Logic from Code 2) ---
+# --- CALCULATION ENGINE ---
 results = []
 for _, row in st.session_state.inventory_data.iterrows():
     p_cost = row['MOQ'] * row['Unit Cost']
@@ -144,7 +147,7 @@ for _, row in st.session_state.inventory_data.iterrows():
     rev = p_cost + profit
    
     rop = (row['Current Qty'] * 0.05 * multiplier) * (row['Lead Time'] + lead_buffer)
-    # Predictive Score (Point 5 from your rules)
+    # Predictive Score (Point 5 from guidelines)
     score = round((min(row['Current Qty']/(rop*2 if rop>0 else 1), 1.0)*100)*(1-(row['Damage Rate (%)']/100)), 1)
    
     results.append({
@@ -158,7 +161,7 @@ res_df = pd.DataFrame(results)
 # --- TAB 2: ANALYTICS ---
 with tabs[1]:
     if not res_df.empty:
-        st.subheader("Performance Visualizations")
+        st.subheader("Smart Insights")
         g1, g2 = st.columns(2)
         with g1:
             st.markdown("**Profit vs Cost Analysis**")
@@ -168,12 +171,12 @@ with tabs[1]:
             st.line_chart(res_df.set_index('Item')['Score'])
        
         st.divider()
-        st.subheader("Predictive Health Matrix") # 5th Point
+        st.subheader("Predictive Score Matrix") # 5th point
         m_cols = st.columns(3)
         for i, row in res_df.iterrows():
             with m_cols[i % 3]:
                 st.metric(row['Item'], f"{row['Score']}%", delta=row['Status'], delta_color="normal" if "HEALTHY" in row['Status'] else "inverse")
-    else: st.info("Enter data to see analytics.")
+    else: st.info("No data available for analytics.")
 
 # --- TAB 3: FINANCIALS ---
 with tabs[2]:
@@ -183,26 +186,24 @@ with tabs[2]:
         t_r = res_df['Revenue'].sum()
         rem = budget_cap - t_r
 
-        st.subheader("Financial Summary")
+        st.subheader("Executive Summary")
         c1, c2, c3 = st.columns(3)
-        c1.metric("Total Investment", f"PKR {t_p:,.0f}")
-        c2.metric("Projected Profit", f"PKR {t_e:,.0f}", f"{profit_percent}% Markup")
-        c3.metric("Market Revenue", f"PKR {t_r:,.0f}")
+        c1.metric("Total Investment", f"{t_p:,.0f}")
+        c2.metric("Projected Profit", f"{t_e:,.0f}", f"{profit_percent}% Markup")
+        c3.metric("Projected Revenue", f"{t_r:,.0f}")
 
         st.divider()
         b1, b2 = st.columns(2)
-        b1.metric("Budget Limit", f"PKR {budget_cap:,.0f}")
-        b2.metric("Remaining Balance", f"PKR {rem:,.0f}", delta_color="normal" if rem >= 0 else "inverse")
-        if rem < 0: st.error(f"Budget Exceeded by PKR {abs(rem):,.0f}")
-
+        b1.metric("Budget Limit", f"{budget_cap:,.0f}")
+        b2.metric("Balance Remaining", f"{rem:,.0f}", delta_color="normal" if rem >= 0 else "inverse")
+        
         st.divider()
         st.subheader("Export Center")
         d1, d2 = st.columns(2)
-       
         audit_stats = {'total_p': t_p, 'total_e': t_e, 'rem': rem}
         admin_pdf = generate_pdf(results, "ADMIN", stats=audit_stats)
-        d1.download_button("📩 Download Full Admin Audit", admin_pdf, "Admin_Audit.pdf", use_container_width=True)
+        d1.download_button("📥 Export Admin Audit", admin_pdf, "Admin_Audit.pdf", use_container_width=True)
        
         vendor_pdf = generate_pdf(results, "VENDOR")
-        d2.download_button("📦 Download Vendor Order (Reorders Only)", vendor_pdf, "Purchase_Order.pdf", use_container_width=True)
-    else: st.info("Financial reports will appear here after data entry.")
+        d2.download_button("📦 Export Vendor Order", vendor_pdf, "Purchase_Order.pdf", use_container_width=True)
+    else: st.info("Financial reports will be generated after data entry.")
