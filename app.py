@@ -58,6 +58,7 @@ def generate_multi_report(df, r_type):
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", 'B', 14)
     
+    # 5th Point logic: Predictive Score/Health %
     if r_type == "ADMIN":
         title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 20), ("Risk Cost", 35), ("Health %", 30), ("Next Service", 40)]
     elif r_type == "SUMMARY":
@@ -75,11 +76,13 @@ def generate_multi_report(df, r_type):
 
     pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", '', 8)
     for _, row in df.iterrows():
-        n_date = str(row['Next_Service']) if pd.notna(row['Next_Service']) else "N/A"
+        # --- FIXED DATE FORMATTING FOR PDF (DD-MM-YYYY) ---
+        n_date = pd.to_datetime(row['Next_Service']).strftime('%d-%m-%Y') if pd.notna(row['Next_Service']) else "N/A"
+        
         if r_type == "ADMIN":
             pdf.cell(60, 8, str(row['Asset']), 1); pdf.cell(20, 8, str(int(row['Qty'])), 1, 0, 'C')
             pdf.cell(35, 8, f"{row['Est. Repair Cost']:,.0f}", 1, 0, 'R'); pdf.cell(30, 8, f"{int(row['Predictive Score'])}%", 1, 0, 'C')
-            pdf.cell(40, 8, n_date, 1, 1, 'C')
+            pdf.cell(40, 8, n_date, 1, 1, 'C') # Next Service in DD-MM-YYYY
         elif r_type == "SUMMARY":
             pdf.cell(90, 8, str(row['Asset']), 1); pdf.cell(40, 8, str(int(row['Qty'])), 1, 0, 'C')
             pdf.cell(55, 8, f"{int(row['Predictive Score'])}%", 1, 1, 'C')
@@ -92,17 +95,14 @@ def generate_multi_report(df, r_type):
 if 'assets' not in st.session_state:
     st.session_state.assets = pd.DataFrame([
         {"Asset": "Air Conditioners", "Qty": 20, "Avg Age (Yrs)": 3, "Last Service": "01-10-2023", "Warranty": "01-01-2025", "Term Value": 6, "Term Type": "Months"},
-        {"Asset": "Computers", "Qty": 50, "Avg Age (Yrs)": 2, "Last Service": "15-01-2024", "Warranty": "01-06-2025", "Term Value": 1, "Term Type": "Years"},
     ])
 
 with st.sidebar:
     st.title(f"🏢 {st.session_state.org_name}")
     st.divider()
-    
     st.subheader("💰 Financial Budget")
     starting_balance = st.number_input("Starting Balance", min_value=0, value=1000000)
     parts_markup = st.slider("Parts Buffer (%)", 1, 200, 20) / 100
-    
     if st.button("🔴 Logout", use_container_width=True):
         st.session_state.clear()
         st.rerun()
@@ -147,7 +147,6 @@ with tabs[1]:
     def calc_next(r):
         if pd.isna(r['Last Service Date']): return None
         val = int(r['Term Value'])
-        # Logic for Month vs Year
         days = val * 30 if r['Term Type'] == "Months" else val * 365
         return (r['Last Service Date'] + timedelta(days=days)).date()
 
@@ -166,26 +165,21 @@ with tabs[2]:
     risk_df['Est. Repair Cost'] = (risk_df['Risk_F'] * 5500) * (1 + parts_markup) * risk_df['Qty']
     risk_df['Predictive Score'] = (100 - (risk_df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
 
-    total_estimated_cost = risk_df['Est. Repair Cost'].sum()
-    current_balance = starting_balance - total_estimated_cost
+    total_cost = risk_df['Est. Repair Cost'].sum()
+    current_bal = starting_balance - total_cost
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Financial Exposure", f"{total_estimated_cost:,.0f}")
-    m2.metric("Remaining Balance", f"{current_balance:,.0f}", delta=f"-{total_estimated_cost:,.0f}", delta_color="inverse")
+    m1.metric("Financial Exposure", f"{total_cost:,.0f}")
+    m2.metric("Remaining Balance", f"{current_bal:,.0f}", delta=f"-{total_cost:,.0f}", delta_color="inverse")
     m3.metric("Critical Items", len(risk_df[risk_df['Predictive Score'] < 45]))
     m4.metric("Avg System Health", f"{int(risk_df['Predictive Score'].mean()) if not risk_df.empty else 0}%")
 
     st.divider()
     
     if not risk_df.empty:
-        st.subheader("📈 Financial Risk Distribution")
-        fig = px.bar(risk_df, x='Asset', y='Est. Repair Cost', color='Predictive Score',
-                      color_continuous_scale='RdYlGn', template="plotly_white", height=500)
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.divider()
-    st.subheader("📥 Export Departmental Reports")
-    c1, c2, c3 = st.columns(3)
-    c1.download_button("Admin Audit Report", generate_multi_report(risk_df, "ADMIN"), "Admin_Audit.pdf", use_container_width=True)
-    c2.download_button("Asset Summary PDF", generate_multi_report(risk_df, "SUMMARY"), "Summary.pdf", use_container_width=True)
-    c3.download_button("Critical Orders List", generate_multi_report(risk_df, "ORDER"), "Orders.pdf", use_container_width=True)
+        st.subheader("📥 Export Departmental Reports")
+        c1, c2, c3 = st.columns(3)
+        # Reports will now use the DD-MM-YYYY format for the service dates
+        c1.download_button("Admin Audit Report", generate_multi_report(risk_df, "ADMIN"), "Admin_Audit.pdf", use_container_width=True)
+        c2.download_button("Asset Summary PDF", generate_multi_report(risk_df, "SUMMARY"), "Summary.pdf", use_container_width=True)
+        c3.download_button("Critical Orders List", generate_multi_report(risk_df, "ORDER"), "Orders.pdf", use_container_width=True)
