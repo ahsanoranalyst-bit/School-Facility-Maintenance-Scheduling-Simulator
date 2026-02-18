@@ -75,6 +75,7 @@ def generate_multi_report(df, r_type):
 
     pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", '', 8)
     for _, row in df.iterrows():
+        # --- PDF Date Formatting ---
         n_date = pd.to_datetime(row['Next_Service']).strftime('%d-%m-%Y') if pd.notna(row['Next_Service']) else "N/A"
         if r_type == "ADMIN":
             pdf.cell(60, 8, str(row['Asset']), 1)
@@ -113,19 +114,22 @@ with tabs[0]:
     st.subheader("Asset Health Ledger")
     up = st.file_uploader("📂 Import Assets", type=["xlsx", "csv"])
     if up:
-        st.session_state.assets = pd.read_excel(up) if up.name.endswith('xlsx') else pd.read_csv(up)
-        st.success("Database Updated!")
+        # --- Auto-Detecting DD-MM-YYYY on Import ---
+        new_data = pd.read_excel(up) if up.name.endswith('xlsx') else pd.read_csv(up)
+        for col in ['Last Service', 'Warranty']:
+            if col in new_data.columns:
+                new_data[col] = pd.to_datetime(new_data[col], dayfirst=True).dt.strftime('%d-%m-%Y')
+        st.session_state.assets = new_data
+        st.success("Database Updated with DD-MM-YYYY format!")
 
     with st.expander("➕ Register New Asset"):
         with st.form("add_form"):
-            # Reordered columns to group Age and Term together
             c1, c2, c3, c4 = st.columns(4)
             a_name = c1.text_input("Asset Name")
             a_qty = c2.number_input("Quantity", min_value=1, value=1)
             a_cost = c3.number_input("Unit Cost", min_value=0.0, value=0.0)
             a_age = c4.number_input("Avg Age (Years)", min_value=0.0, value=1.0)
             
-            # Maintenance Term settings grouped together
             c5, c6, c7, c8 = st.columns(4)
             a_term_val = c5.number_input("Term Value", min_value=1, value=6)
             a_term_type = c6.selectbox("Term Type", ["Months", "Years"])
@@ -133,9 +137,11 @@ with tabs[0]:
             a_war = c8.date_input("Warranty Expiry")
             
             if st.form_submit_button("Add to Ledger"):
+                # --- Storing in DD-MM-YYYY ---
                 new_entry = {"Asset": a_name, "Qty": a_qty, "Unit Cost": a_cost, "Avg Age (Yrs)": a_age, 
                             "Term Value": a_term_val, "Term Type": a_term_type,
-                            "Last Service": a_svc.strftime('%d-%m-%Y'), "Warranty": a_war.strftime('%d-%m-%Y')}
+                            "Last Service": a_svc.strftime('%d-%m-%Y'), 
+                            "Warranty": a_war.strftime('%d-%m-%Y')}
                 st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_entry])], ignore_index=True)
                 st.rerun()
 
@@ -162,7 +168,7 @@ with tabs[2]:
     risk_df['Qty'] = pd.to_numeric(risk_df['Qty'], errors='coerce').fillna(1)
     risk_df['Unit Cost'] = pd.to_numeric(risk_df['Unit Cost'], errors='coerce').fillna(0)
     
-    risk_df['Risk_F'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.7 if str(x).lower() == "expired" else 1.0)
+    risk_df['Risk_F'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.7 if "expired" in str(x).lower() else 1.0)
     risk_df['Est. Repair Cost'] = (risk_df['Unit Cost'] * (1 + parts_markup)) * risk_df['Qty']
     risk_df['Predictive Score'] = (100 - (risk_df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
 
