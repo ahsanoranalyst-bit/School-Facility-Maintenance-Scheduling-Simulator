@@ -1,9 +1,11 @@
+
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime
 from fpdf import FPDF
-import plotly.express as px
 
 # --- 1. GLOBAL CONFIGURATION ---
 MASTER_KEY = "Ahsan123"
@@ -36,7 +38,7 @@ if st.session_state.auth and not st.session_state.org_name:
                 st.rerun()
     st.stop()
 
-# --- 3. UPDATED PDF ENGINE WITH FINANCIAL SUMMARY ---
+# --- 3. PDF REPORT ENGINE (ENGLISH) ---
 class FacilityPDF(FPDF):
     def header(self):
         self.set_fill_color(31, 78, 121)
@@ -45,124 +47,118 @@ class FacilityPDF(FPDF):
         self.set_font("Arial", 'B', 18)
         self.cell(0, 10, st.session_state.org_name.upper(), ln=True, align='C')
         self.set_font("Arial", '', 10)
-        self.cell(0, 5, "Detailed Financial & Maintenance Audit", ln=True, align='C')
+        self.cell(0, 5, "Asset Maintenance & Financial Audit Report", ln=True, align='C')
         self.ln(20)
 
-def generate_multi_report(df, r_type, budget_info):
+def generate_pdf_report(df, budget_info):
     pdf = FacilityPDF()
     pdf.add_page()
     pdf.set_text_color(0, 0, 0)
     
-    # Financial Summary Section in PDF
+    # Financial Summary Table
     pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 10, "FINANCIAL SUMMARY", ln=True)
     pdf.set_font("Arial", '', 10)
-    pdf.cell(90, 8, f"Initial Budget: Rs. {budget_info['total']:,.0f}", 1)
-    pdf.cell(90, 8, f"Total Estimated Cost: Rs. {budget_info['spent']:,.0f}", 1, 1)
-    pdf.cell(90, 8, f"Total Profit Margin: Rs. {budget_info['profit']:,.0f}", 1)
-    pdf.cell(90, 8, f"Remaining Balance: Rs. {budget_info['remaining']:,.0f}", 1, 1)
+    pdf.cell(60, 8, "Total Budget", 1); pdf.cell(130, 8, f"Rs. {budget_info['total']:,.0f}", 1, 1)
+    pdf.cell(60, 8, "Projected Expense", 1); pdf.cell(130, 8, f"Rs. {budget_info['spent']:,.0f}", 1, 1)
+    pdf.cell(60, 8, "Profit/Markup", 1); pdf.cell(130, 8, f"Rs. {budget_info['profit']:,.0f}", 1, 1)
+    pdf.cell(60, 8, "Remaining Balance", 1); pdf.cell(130, 8, f"Rs. {budget_info['remaining']:,.0f}", 1, 1)
     pdf.ln(10)
 
-    # Table Logic
-    pdf.set_font("Arial", 'B', 11)
-    title = "EXECUTIVE SUMMARY REPORT"
-    cols = [("Asset Item", 70), ("Qty", 20), ("Unit Cost", 30), ("Total Cost", 40), ("Health", 30)]
-    
-    pdf.cell(0, 10, title, ln=True, align='L')
-    pdf.set_fill_color(46, 117, 182); pdf.set_text_color(255, 255, 255)
-    for txt, w in cols: pdf.cell(w, 10, txt, 1, 0, 'C', True)
-    pdf.ln()
+    # Asset Table
+    pdf.set_font("Arial", 'B', 10)
+    pdf.set_fill_color(200, 200, 200)
+    pdf.cell(60, 10, "Asset Name", 1, 0, 'C', True)
+    pdf.cell(20, 10, "Qty", 1, 0, 'C', True)
+    pdf.cell(40, 10, "Warranty Exp.", 1, 0, 'C', True)
+    pdf.cell(40, 10, "Unit Cost", 1, 0, 'C', True)
+    pdf.cell(30, 10, "Total", 1, 1, 'C', True)
 
-    pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", '', 9)
+    pdf.set_font("Arial", '', 9)
     for _, row in df.iterrows():
-        pdf.cell(70, 8, str(row['Asset']), 1)
-        pdf.cell(20, 8, str(int(row['Qty'])), 1, 0, 'C')
-        pdf.cell(30, 8, f"{row['Service Cost']:,.0f}", 1, 0, 'R')
-        pdf.cell(40, 8, f"{row['Final_Total']:,.0f}", 1, 0, 'R')
-        pdf.cell(30, 8, f"{int(row['Predictive Score'])}%", 1, 1, 'C')
+        pdf.cell(60, 8, str(row['Asset']), 1)
+        pdf.cell(20, 8, str(row['Qty']), 1, 0, 'C')
+        pdf.cell(40, 8, str(row['Warranty']), 1, 0, 'C')
+        pdf.cell(40, 8, f"{row['Service Cost']:,.0f}", 1, 0, 'R')
+        pdf.cell(30, 8, f"{row['Final_Total']:,.0f}", 1, 1, 'R')
         
     return pdf.output(dest='S').encode('latin-1')
 
-# --- 4. DATA INITIALIZATION ---
+# --- 4. DATA STORAGE ---
 if 'assets' not in st.session_state:
     st.session_state.assets = pd.DataFrame(columns=["Asset", "Qty", "Age Value", "Age Unit", "Service Cost", "Last Service", "Warranty"])
 
+# --- 5. SIDEBAR CONTROLS ---
 with st.sidebar:
     st.title(f"🏢 {st.session_state.org_name}")
     st.divider()
-    
-    # NEW: Budget Input
-    total_budget = st.number_input("💰 Set Available Budget (Rs.)", min_value=0.0, value=1000000.0, step=1000.0)
-    
-    # Profit Slider
+    total_budget = st.number_input("💰 Available Budget (Rs.)", min_value=0.0, value=1000000.0)
     profit_perc = st.slider("📈 Profit Margin (%)", 0, 200, 20)
-    
     st.divider()
     if st.button("🔴 Logout"):
         st.session_state.clear()
         st.rerun()
 
-# --- 5. MAIN INTERFACE ---
-tabs = st.tabs(["📋 Inventory & Costs", "📊 Financial Analytics", "📅 Service Schedule"])
+# --- 6. MAIN CONTENT ---
+tabs = st.tabs(["📋 Inventory Management", "📊 Financial Analytics", "📅 Service Schedules"])
 
 with tabs[0]:
-    st.subheader("Asset Ledger with Manual Pricing")
+    st.header("Asset Registry")
     
-    with st.expander("➕ Add New Asset & Set Price"):
-        with st.form("add_form"):
+    with st.expander("➕ Register New Asset"):
+        with st.form("asset_form"):
             c1, c2, c3 = st.columns(3)
-            a_name = c1.text_input("Asset Name")
-            a_qty = c2.number_input("Quantity", min_value=1, value=1)
-            a_cost = c3.number_input("Service Cost per Unit", min_value=0.0, value=5000.0)
+            name = c1.text_input("Asset Name")
+            qty = c2.number_input("Quantity", min_value=1, step=1)
+            cost = c3.number_input("Service Cost Per Unit (Rs.)", min_value=0.0)
             
-            c4, c5 = st.columns(2)
-            a_age_val = c4.number_input("Age Value", min_value=0.0, value=1.0)
-            a_age_unit = c5.selectbox("Unit", ["Years", "Months"])
+            c4, c5, c6 = st.columns(3)
+            age_val = c4.number_input("Current Age", min_value=0.0)
+            age_unit = c5.selectbox("Time Unit", ["Years", "Months"])
+            warranty = c6.date_input("Warranty Expiry Date")
             
-            if st.form_submit_button("Save Asset"):
-                new_row = {"Asset": a_name, "Qty": a_qty, "Age Value": a_age_val, "Age Unit": a_age_unit, 
-                           "Service Cost": a_cost, "Last Service": "01-01-2024", "Warranty": "Active"}
-                st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_row])], ignore_index=True)
+            if st.form_submit_button("Add to Inventory"):
+                new_data = {
+                    "Asset": name, "Qty": qty, "Age Value": age_val, 
+                    "Age Unit": age_unit, "Service Cost": cost, 
+                    "Last Service": datetime.now().strftime('%Y-%m-%d'),
+                    "Warranty": warranty.strftime('%Y-%m-%d')
+                }
+                st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_data])], ignore_index=True)
                 st.rerun()
 
+    st.subheader("Current Inventory Ledger")
     st.session_state.assets = st.data_editor(st.session_state.assets, num_rows="dynamic", use_container_width=True)
 
 with tabs[1]:
-    st.title("Strategic Financial Analytics")
-    df = st.session_state.assets.copy()
-    
-    if not df.empty:
-        # Financial Calculations
+    if not st.session_state.assets.empty:
+        df = st.session_state.assets.copy()
+        
+        # Financial Logic
         df['Base_Total'] = df['Qty'] * df['Service Cost']
-        df['Profit_Amount'] = df['Base_Total'] * (profit_perc / 100)
-        df['Final_Total'] = df['Base_Total'] + df['Profit_Amount']
+        df['Markup_Amount'] = df['Base_Total'] * (profit_perc / 100)
+        df['Final_Total'] = df['Base_Total'] + df['Markup_Amount']
         
-        # Predictive Score Logic
-        df['Years_Calc'] = df.apply(lambda r: r['Age Value'] if r['Age Unit'] == "Years" else r['Age Value'] / 12, axis=1)
-        df['Predictive Score'] = (100 - (df['Years_Calc'] * 6)).clip(lower=5, upper=100).astype(int)
-
-        total_spent = df['Final_Total'].sum()
-        total_profit = df['Profit_Amount'].sum()
-        remaining = total_budget - total_spent
+        # Predictive Health Score (Point 5)
+        df['Years'] = df.apply(lambda x: x['Age Value'] if x['Age Unit']=="Years" else x['Age Value']/12, axis=1)
+        df['Predictive Score'] = (100 - (df['Years'] * 7)).clip(lower=0, upper=100)
         
-        # Metrics Display
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Available Budget", f"Rs. {total_budget:,.0f}")
-        m2.metric("Total Est. Cost", f"Rs. {total_spent:,.0f}", delta=f"-{total_spent:,.0f}", delta_color="inverse")
-        m3.metric("Profit Earned", f"Rs. {total_profit:,.0f}")
+        total_exp = df['Final_Total'].sum()
+        total_profit = df['Markup_Amount'].sum()
+        balance = total_budget - total_exp
         
-        if remaining >= 0:
-            m4.metric("Remaining Balance", f"Rs. {remaining:,.0f}", delta="Within Budget")
-        else:
-            m4.metric("Remaining Balance", f"Rs. {remaining:,.0f}", delta="Budget Overrun", delta_color="inverse")
-
+        # Dashboard Metrics
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Budget Balance", f"Rs. {balance:,.0f}", delta="Remaining")
+        m2.metric("Total Expense", f"Rs. {total_exp:,.0f}", delta=f"Profit: {total_profit:,.0f}")
+        m3.metric("Avg Asset Health", f"{int(df['Predictive Score'].mean())}%")
+        
         st.divider()
         
-        # PDF Export with Financial Data
-        budget_data = {"total": total_budget, "spent": total_spent, "profit": total_profit, "remaining": remaining}
-        if st.download_button("📥 Download Financial Summary PDF", 
-                               generate_multi_report(df, "SUMMARY", budget_data), 
-                               "Financial_Summary.pdf"):
-            st.success("Report Generated!")
+        # Export
+        budget_summary = {"total": total_budget, "spent": total_exp, "profit": total_profit, "remaining": balance}
+        pdf_bytes = generate_pdf_report(df, budget_summary)
+        st.download_button("📥 Download PDF Audit Report", pdf_bytes, "Maintenance_Report.pdf", "application/pdf")
+        
     else:
-        st.info("Please add assets to see financial analytics.")
+        st.warning("No data available. Please add assets in the Inventory tab.")
