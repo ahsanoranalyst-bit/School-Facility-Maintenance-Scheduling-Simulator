@@ -1,3 +1,5 @@
+
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -55,7 +57,7 @@ def generate_multi_report(df, r_type):
     pdf.add_page()
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", 'B', 14)
-   
+    
     if r_type == "ADMIN":
         title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 20), ("Risk Cost", 35), ("Health %", 30), ("Next Service", 40)]
     elif r_type == "SUMMARY":
@@ -89,17 +91,20 @@ def generate_multi_report(df, r_type):
 # --- 4. DATA LOGIC & SESSION STATE ---
 if 'assets' not in st.session_state:
     st.session_state.assets = pd.DataFrame([
-        {"Asset": "Air Conditioners", "Qty": 20, "Avg Age (Yrs)": 3, "Last Service": "01-10-2023", "Warranty": "01-01-2025"},
-        {"Asset": "Computers", "Qty": 50, "Avg Age (Yrs)": 2, "Last Service": "15-01-2024", "Warranty": "01-06-2025"},
-        {"Asset": "Plumbing System", "Qty": 1, "Avg Age (Yrs)": 15, "Last Service": "20-05-2022", "Warranty": "Expired"}
+        {"Asset": "Air Conditioners", "Qty": 20, "Avg Age (Yrs)": 3, "Last Service": "01-10-2023", "Warranty": "01-01-2025", "Month": "October"},
+        {"Asset": "Computers", "Qty": 50, "Avg Age (Yrs)": 2, "Last Service": "15-01-2024", "Warranty": "01-06-2025", "Month": "January"},
     ])
 
 with st.sidebar:
     st.title(f"🏢 {st.session_state.org_name}")
     st.divider()
+    
+    st.subheader("💰 Financial Budget")
+    starting_balance = st.number_input("Starting Balance (USD/PKR)", min_value=0, value=1000000)
+    
     parts_markup = st.slider("Parts Buffer (%)", 1, 200, 20) / 100
-    st.info("🚛 Driver Schedule:\nPickup: Furthest person first.\nDrop-off: Closest person first.")
-    if st.button("🔴 Logout"):
+    
+    if st.button("🔴 Logout", use_container_width=True):
         st.session_state.clear()
         st.rerun()
 
@@ -107,41 +112,45 @@ tabs = st.tabs(["📋 Inventory Management", "📅 Service Schedule", "📊 Pred
 
 with tabs[0]:
     st.subheader("Asset Health Ledger")
-    up = st.file_uploader("📂 Import Assets", type=["xlsx", "csv"])
+    up = st.file_uploader("📂 Import Assets (Excel/CSV)", type=["xlsx", "csv"])
     if up:
         st.session_state.assets = pd.read_excel(up) if up.name.endswith('xlsx') else pd.read_csv(up)
-        st.success("File Imported!")
+        st.success("Database Updated!")
 
-    with st.expander("➕ Add New Asset Details"):
+    with st.expander("➕ Register New Asset"):
         with st.form("add_form"):
             c1, c2, c3 = st.columns(3)
             a_name = c1.text_input("Asset Name")
             a_qty = c2.number_input("Quantity", min_value=1, value=1)
-            a_age = c3.number_input("Age (Yrs)", min_value=0.0, value=1.0)
-            c4, c5 = st.columns(2)
-            a_svc = c4.date_input("Last Service", format="DD/MM/YYYY")
-            a_war = c5.date_input("Warranty Expiry", format="DD/MM/YYYY")
-            if st.form_submit_button("Save Asset"):
-                new_data = {"Asset": a_name, "Qty": a_qty, "Avg Age (Yrs)": a_age,
+            a_age = c3.number_input("Age (Years)", min_value=0.0, value=1.0)
+            
+            c4, c5, c6 = st.columns(3)
+            a_svc = c4.date_input("Last Service Date")
+            a_war = c5.date_input("Warranty Expiry")
+            a_month = c6.selectbox("Recording Month", ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"])
+            
+            if st.form_submit_button("Add to Ledger"):
+                new_entry = {"Asset": a_name, "Qty": a_qty, "Avg Age (Yrs)": a_age,
                             "Last Service": a_svc.strftime('%d-%m-%Y'),
-                            "Warranty": a_war.strftime('%d-%m-%Y')}
-                st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_data])], ignore_index=True)
+                            "Warranty": a_war.strftime('%d-%m-%Y'),
+                            "Month": a_month}
+                st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_entry])], ignore_index=True)
                 st.rerun()
 
     st.session_state.assets = st.data_editor(st.session_state.assets, num_rows="dynamic", use_container_width=True)
 
 with tabs[1]:
-    st.subheader("Maintenance Forecast (DD-MM-YYYY)")
+    st.subheader("Automated Service Forecast")
     sched_df = st.session_state.assets.copy().dropna(subset=['Asset'])
     sched_df['Last Service Date'] = pd.to_datetime(sched_df['Last Service'], dayfirst=True, errors='coerce')
-   
+    
     def calc_next(r):
         if pd.isna(r['Last Service Date']): return None
         days = 180 if r['Avg Age (Yrs)'] > 5 else 365
         return (r['Last Service Date'] + timedelta(days=days)).date()
 
     sched_df['Next_Service'] = sched_df.apply(calc_next, axis=1)
-    display_df = sched_df[['Asset', 'Last Service', 'Next_Service']].copy()
+    display_df = sched_df[['Asset', 'Month', 'Last Service', 'Next_Service']].copy()
     display_df['Next_Service'] = pd.to_datetime(display_df['Next_Service']).dt.strftime('%d-%m-%Y')
     st.dataframe(display_df.fillna("N/A"), use_container_width=True)
 
@@ -150,36 +159,46 @@ with tabs[2]:
     risk_df = sched_df.copy()
     risk_df['Avg Age (Yrs)'] = pd.to_numeric(risk_df['Avg Age (Yrs)'], errors='coerce').fillna(0)
     risk_df['Qty'] = pd.to_numeric(risk_df['Qty'], errors='coerce').fillna(1)
-   
+    
+    # Logic for Risk and Cost
     risk_df['Risk_F'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.7 if str(x).lower() == "expired" else 1.0)
     risk_df['Est. Repair Cost'] = (risk_df['Risk_F'] * 5500) * (1 + parts_markup) * risk_df['Qty']
     risk_df['Predictive Score'] = (100 - (risk_df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
 
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Financial Exposure", f"Rs. {risk_df['Est. Repair Cost'].sum():,.0f}")
-    m2.metric("Critical Items", len(risk_df[risk_df['Predictive Score'] < 45]))
-    m3.metric("System Health", f"{int(risk_df['Predictive Score'].mean()) if not risk_df.empty else 0}%")
+    # Balance Calculation
+    total_estimated_cost = risk_df['Est. Repair Cost'].sum()
+    current_balance = starting_balance - total_estimated_cost
+
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("Financial Exposure", f"{total_estimated_cost:,.0f}")
+    m2.metric("Remaining Balance", f"{current_balance:,.0f}", delta=f"-{total_estimated_cost:,.0f}", delta_color="inverse")
+    m3.metric("Critical Items", len(risk_df[risk_df['Predictive Score'] < 45]))
+    m4.metric("Average System Health", f"{int(risk_df['Predictive Score'].mean()) if not risk_df.empty else 0}%")
 
     st.divider()
-   
+    
     if not risk_df.empty:
-        st.subheader("📈 Risk vs. Cost Distribution")
-        fig = px.bar(risk_df, x='Asset', y='Est. Repair Cost', color='Predictive Score',
-                     color_continuous_scale='RdYlGn', template="plotly_white", height=500)
+        # Month Filter
+        selected_months = st.multiselect("Filter Data by Month", options=risk_df['Month'].unique(), default=risk_df['Month'].unique())
+        filtered_df = risk_df[risk_df['Month'].isin(selected_months)]
+
+        st.subheader("📈 Financial Risk Distribution")
+        fig = px.bar(filtered_df, x='Asset', y='Est. Repair Cost', color='Predictive Score',
+                      color_continuous_scale='RdYlGn', template="plotly_white", height=500, hover_data=['Month'])
         st.plotly_chart(fig, use_container_width=True)
 
         st.divider()
-        st.subheader("🛠️ Asset Health Monitoring")
+        st.subheader("🛠️ Asset Health Status")
         cols = st.columns(3)
-        for i, (idx, r) in enumerate(risk_df.iterrows()):
+        for i, (idx, r) in enumerate(filtered_df.iterrows()):
             with cols[i % 3]:
-                st.write(f"**{r['Asset']}**")
+                st.write(f"**{r['Asset']}** ({r['Month']})")
                 st.progress(r['Predictive Score']/100)
-                st.caption(f"Score: {r['Predictive Score']}% | Est. Cost: {r['Est. Repair Cost']:,.0f}")
+                st.caption(f"Health Score: {r['Predictive Score']}% | Est. Cost: {r['Est. Repair Cost']:,.0f}")
 
     st.divider()
-    st.subheader("📥 Export Departmental Reports")
+    st.subheader("📥 Download Departmental Reports")
     c1, c2, c3 = st.columns(3)
-    c1.download_button("Admin Audit", generate_multi_report(risk_df, "ADMIN"), "Admin_Audit.pdf", use_container_width=True)
-    c2.download_button("Assembly Summary", generate_multi_report(risk_df, "SUMMARY"), "Assembly_Summary.pdf", use_container_width=True)
-    c3.download_button("Bundle Order", generate_multi_report(risk_df, "ORDER"), "Bundle_Order.pdf", use_container_width=True)
+    c1.download_button("Admin Audit Report", generate_multi_report(risk_df, "ADMIN"), "Admin_Audit.pdf", use_container_width=True)
+    c2.download_button("Asset Summary PDF", generate_multi_report(risk_df, "SUMMARY"), "Summary.pdf", use_container_width=True)
+    c3.download_button("Critical Orders List", generate_multi_report(risk_df, "ORDER"), "Orders.pdf", use_container_width=True)
