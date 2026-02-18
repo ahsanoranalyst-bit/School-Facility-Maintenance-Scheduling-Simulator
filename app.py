@@ -94,7 +94,7 @@ def generate_multi_report(df, r_type):
 # --- 4. DATA LOGIC & SESSION STATE ---
 if 'assets' not in st.session_state:
     st.session_state.assets = pd.DataFrame([
-        {"Asset": "Air Conditioners", "Qty": 20, "Unit Cost": 5000, "Avg Age (Yrs)": 3, "Last Service": "01-10-2023", "Warranty": "01-01-2025", "Term Value": 6, "Term Type": "Months"},
+        {"Asset": "Air Conditioners", "Qty": 20, "Unit Cost": 5000, "Avg Age (Yrs)": 3, "Term Value": 6, "Term Type": "Months", "Last Service": "01-10-2023", "Warranty": "01-01-2025"},
     ])
 
 with st.sidebar:
@@ -102,10 +102,7 @@ with st.sidebar:
     st.divider()
     st.subheader("💰 Financial Budget")
     starting_balance = st.number_input("Starting Balance", min_value=0, value=1000000)
-    
-    # --- FIXED: Starts from 0 instead of 1 ---
     parts_markup = st.slider("Parts Buffer (%)", 0, 200, 20) / 100
-    
     if st.button("🔴 Logout", use_container_width=True):
         st.session_state.clear()
         st.rerun()
@@ -121,22 +118,24 @@ with tabs[0]:
 
     with st.expander("➕ Register New Asset"):
         with st.form("add_form"):
-            c1, c2, c3, c_cost = st.columns(4)
+            # Reordered columns to group Age and Term together
+            c1, c2, c3, c4 = st.columns(4)
             a_name = c1.text_input("Asset Name")
             a_qty = c2.number_input("Quantity", min_value=1, value=1)
-            a_age = c3.number_input("Age (Years)", min_value=0.0, value=1.0)
-            a_cost = c_cost.number_input("Unit Cost", min_value=0.0, value=0.0)
+            a_cost = c3.number_input("Unit Cost", min_value=0.0, value=0.0)
+            a_age = c4.number_input("Avg Age (Years)", min_value=0.0, value=1.0)
             
-            c4, c5, c6, c7 = st.columns(4)
-            a_svc = c4.date_input("Last Service Date")
-            a_war = c5.date_input("Warranty Expiry")
-            a_term_val = c6.number_input("Term Value", min_value=1, value=6)
-            a_term_type = c7.selectbox("Term Type", ["Months", "Years"])
+            # Maintenance Term settings grouped together
+            c5, c6, c7, c8 = st.columns(4)
+            a_term_val = c5.number_input("Term Value", min_value=1, value=6)
+            a_term_type = c6.selectbox("Term Type", ["Months", "Years"])
+            a_svc = c7.date_input("Last Service Date")
+            a_war = c8.date_input("Warranty Expiry")
             
             if st.form_submit_button("Add to Ledger"):
                 new_entry = {"Asset": a_name, "Qty": a_qty, "Unit Cost": a_cost, "Avg Age (Yrs)": a_age, 
-                            "Last Service": a_svc.strftime('%d-%m-%Y'), "Warranty": a_war.strftime('%d-%m-%Y'), 
-                            "Term Value": a_term_val, "Term Type": a_term_type}
+                            "Term Value": a_term_val, "Term Type": a_term_type,
+                            "Last Service": a_svc.strftime('%d-%m-%Y'), "Warranty": a_war.strftime('%d-%m-%Y')}
                 st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_entry])], ignore_index=True)
                 st.rerun()
 
@@ -177,7 +176,6 @@ with tabs[2]:
     m4.metric("Avg System Health", f"{int(risk_df['Predictive Score'].mean()) if not risk_df.empty else 0}%")
 
     st.divider()
-    
     if not risk_df.empty:
         st.subheader("📈 Risk vs. Cost Distribution")
         fig = px.bar(risk_df, x='Asset', y='Est. Repair Cost', color='Predictive Score', color_continuous_scale='RdYlGn', template="plotly_white", height=450)
