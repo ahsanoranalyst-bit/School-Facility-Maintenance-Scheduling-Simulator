@@ -9,7 +9,7 @@ import plotly.express as px
 MASTER_KEY = "Ahsan123"
 st.set_page_config(page_title="Facility Intelligence Suite", layout="wide", page_icon="🏢")
 
-# --- 2. AUTHENTICATION ---
+# --- 2. AUTHENTICATION SYSTEM ---
 if 'auth' not in st.session_state: st.session_state.auth = False
 if 'org_name' not in st.session_state: st.session_state.org_name = ""
 
@@ -22,7 +22,7 @@ if not st.session_state.auth:
             if key == MASTER_KEY:
                 st.session_state.auth = True
                 st.rerun()
-            else: st.error("Invalid Key.")
+            else: st.error("Invalid Activation Key.")
     st.stop()
 
 if st.session_state.auth and not st.session_state.org_name:
@@ -52,12 +52,12 @@ def generate_multi_report(df, r_type, budget_info):
     pdf = FacilityPDF()
     pdf.add_page()
     pdf.set_text_color(0, 0, 0)
-    pdf.set_font("Arial", 'B', 14)
+    pdf.set_font("Arial", 'B', 12)
     
     if r_type == "ADMIN":
-        title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 20), ("Total Cost", 35), ("Health %", 30), ("Warranty", 40)]
+        title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset", 60), ("Qty", 20), ("Total Cost", 35), ("Health %", 30), ("Warranty", 40)]
     elif r_type == "SUMMARY":
-        title, cols = "ASSEMBLY SUMMARY REPORT", [("Asset Item", 90), ("Quantity", 40), ("Health Score", 55)]
+        title, cols = "ASSEMBLY SUMMARY REPORT", [("Asset", 90), ("Quantity", 40), ("Health Score", 55)]
     else:
         title, cols = "CRITICAL BUNDLE & VENDOR ORDER", [("Critical Item", 80), ("Qty", 30), ("Priority", 35), ("Est. Cost", 40)]
         df = df[df['Predictive Score'] < 45]
@@ -85,72 +85,95 @@ def generate_multi_report(df, r_type, budget_info):
 
 # --- 4. DATA STORAGE ---
 if 'assets' not in st.session_state:
-    st.session_state.assets = pd.DataFrame(columns=["Asset", "Qty", "Avg Age (Yrs)", "Service Cost", "Last Service", "Warranty"])
+    # Columns aligned with user Excel sheet
+    st.session_state.assets = pd.DataFrame(columns=["Asset", "Qty", "Age Value", "Age Unit", "Service Cost", "Last Service", "Warranty"])
 
 # --- 5. SIDEBAR ---
 with st.sidebar:
     st.title(f"🏢 {st.session_state.org_name}")
     st.divider()
-    total_budget = st.number_input("💰 Total Budget (Rs.)", min_value=0.0, value=1000000.0)
+    total_budget = st.number_input("💰 Set Total Budget (Rs.)", min_value=0.0, value=1000000.0)
+    # Profit level slider (1 to 200) [cite: 2025-12-29]
     parts_markup = st.slider("Profit / Parts Buffer (%)", 1, 200, 20) / 100
     st.divider()
-    if st.button("🔴 Logout"):
+    if st.button("🔴 Logout System"):
         st.session_state.clear()
         st.rerun()
 
 # --- 6. MAIN INTERFACE ---
 tabs = st.tabs(["📋 Inventory Management", "📅 Maintenance Schedule", "📊 Strategic Analytics"])
 
+# --- TAB 1: INVENTORY MANAGEMENT ---
 with tabs[0]:
-    st.header("Asset Registry")
+    st.header("Asset Registry & Import")
     
-    # --- RESTORED: EXCEL/CSV IMPORT OPTION ---
-    up = st.file_uploader("📂 Import Assets (Excel or CSV)", type=["xlsx", "csv"])
+    # Restored Excel/CSV Import with full column support
+    up = st.file_uploader("📂 Import Assets from Excel/CSV", type=["xlsx", "csv"])
     if up:
         try:
-            st.session_state.assets = pd.read_excel(up) if up.name.endswith('xlsx') else pd.read_csv(up)
-            st.success("File Imported Successfully!")
+            imported_df = pd.read_excel(up) if up.name.endswith('xlsx') else pd.read_csv(up)
+            st.session_state.assets = imported_df
+            st.success("Database Updated from File!")
         except Exception as e:
-            st.error(f"Error importing file: {e}")
+            st.error(f"Import failed: {e}")
 
-    with st.expander("➕ Register New Asset Details Manually"):
-        with st.form("asset_form"):
+    with st.expander("➕ Add New Asset Manually"):
+        with st.form("manual_entry"):
             c1, c2, c3 = st.columns(3)
             name = c1.text_input("Asset Name")
             qty = c2.number_input("Quantity", min_value=1, step=1)
             cost = c3.number_input("Service Cost Per Unit (Rs.)", min_value=0.0)
-            c4, c5, c6 = st.columns(3)
-            age_val = c4.number_input("Current Age (Years)", min_value=0.0)
-            ls_date = c5.date_input("Last Service Date", format="DD/MM/YYYY")
-            wr_date = c6.date_input("Warranty Expiry Date", format="DD/MM/YYYY")
-            if st.form_submit_button("Add to Inventory"):
-                new_data = {"Asset": name, "Qty": qty, "Avg Age (Yrs)": age_val, "Service Cost": cost, 
-                            "Last Service": ls_date.strftime('%d-%m-%Y'), "Warranty": wr_date.strftime('%d-%m-%Y')}
-                st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_data])], ignore_index=True)
+            
+            c4, c5 = st.columns(2)
+            age_val = c4.number_input("Age Value", min_value=0.0)
+            age_unit = c5.selectbox("Age Unit", ["Years", "Months"])
+            
+            c6, c7 = st.columns(2)
+            ls_date = c6.date_input("Last Service Date", format="DD/MM/YYYY")
+            wr_date = c7.date_input("Warranty Expiry Date", format="DD/MM/YYYY")
+            
+            if st.form_submit_button("Save to Inventory"):
+                new_row = {
+                    "Asset": name, "Qty": qty, "Age Value": age_val, 
+                    "Age Unit": age_unit, "Service Cost": cost, 
+                    "Last Service": ls_date.strftime('%d-%m-%Y'), 
+                    "Warranty": wr_date.strftime('%d-%m-%Y')
+                }
+                st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_row])], ignore_index=True)
                 st.rerun()
     
     st.subheader("Inventory Ledger")
     st.session_state.assets = st.data_editor(st.session_state.assets, num_rows="dynamic", use_container_width=True)
 
+# --- TAB 2: MAINTENANCE SCHEDULE ---
 with tabs[1]:
     st.header("📅 Service Forecasting")
     if not st.session_state.assets.empty:
         sched_df = st.session_state.assets.copy()
+        # Enforce DD-MM-YYYY format [cite: 2026-02-10]
         sched_df['Last Service Date'] = pd.to_datetime(sched_df['Last Service'], dayfirst=True, errors='coerce')
         sched_df['Next Service Due'] = (sched_df['Last Service Date'] + timedelta(days=365)).dt.strftime('%d-%m-%Y')
-        st.table(sched_df[['Asset', 'Last Service', 'Next Service Due', 'Warranty']])
+        st.table(sched_df[['Asset', 'Qty', 'Last Service', 'Next Service Due', 'Warranty']])
+    else:
+        st.info("No data available. Please import or add assets.")
 
+# --- TAB 3: STRATEGIC ANALYTICS ---
 with tabs[2]:
     st.title("Strategic Risk & Financial Analytics")
     if not st.session_state.assets.empty:
         df = st.session_state.assets.copy()
+        
+        # Financial Logic
         df['Final_Cost'] = (pd.to_numeric(df['Qty'], errors='coerce').fillna(0) * pd.to_numeric(df['Service Cost'], errors='coerce').fillna(0)) * (1 + parts_markup)
-        df['Risk_Factor'] = pd.to_numeric(df['Avg Age (Yrs)'], errors='coerce').fillna(0) * 1.5
-        df['Predictive Score'] = (100 - (df['Risk_Factor'] * 5)).clip(lower=5, upper=100).astype(int)
+        
+        # Predictive Scoring Logic (Point 5)
+        df['Years_Norm'] = df.apply(lambda x: x['Age Value'] if x['Age Unit'] == 'Years' else x['Age Value']/12, axis=1)
+        df['Predictive Score'] = (100 - (df['Years_Norm'] * 5.5)).clip(lower=5, upper=100).astype(int)
         
         total_exp = df['Final_Cost'].sum()
         balance = total_budget - total_exp
         
+        # High-visibility Metrics
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.markdown(f"**Financial Exposure** \n### Rs. {total_exp:,.0f}")
         m2.markdown(f"**Remaining Balance** \n### Rs. {balance:,.0f}")
@@ -159,16 +182,18 @@ with tabs[2]:
         m5.markdown(f"**Predictive Score** \n### {int(df['Predictive Score'].min())}%")
         
         st.divider()
-        st.subheader("📊 Expense vs. Asset Health Distribution")
-        fig = px.bar(df, x="Asset", y="Final_Cost", color="Predictive Score", color_continuous_scale='RdYlGn', labels={'Final_Cost': 'Total Cost (Rs.)'})
+        st.subheader("📊 Cost vs. Health Distribution")
+        fig = px.bar(df, x="Asset", y="Final_Cost", color="Predictive Score", 
+                     color_continuous_scale='RdYlGn', labels={'Final_Cost': 'Total Expense (Rs.)'})
         st.plotly_chart(fig, use_container_width=True)
         
+        # Restored PDF Reports
         st.divider()
-        st.subheader("📥 Export Departmental Reports")
+        st.subheader("📥 Export Professional Reports")
         c1, c2, c3 = st.columns(3)
-        budget_info = {"total": total_budget, "spent": total_exp, "remaining": balance}
-        c1.download_button("Admin Audit PDF", generate_multi_report(df, "ADMIN", budget_info), "Admin_Audit.pdf", use_container_width=True)
-        c2.download_button("Assembly Summary PDF", generate_multi_report(df, "SUMMARY", budget_info), "Assembly_Summary.pdf", use_container_width=True)
-        c3.download_button("Order Bundle PDF", generate_multi_report(df, "ORDER", budget_info), "Order_Bundle.pdf", use_container_width=True)
+        b_info = {"total": total_budget, "spent": total_exp, "remaining": balance}
+        c1.download_button("Admin Audit (PDF)", generate_multi_report(df, "ADMIN", b_info), "Admin_Audit.pdf", use_container_width=True)
+        c2.download_button("Assembly Summary (PDF)", generate_multi_report(df, "SUMMARY", b_info), "Summary_Report.pdf", use_container_width=True)
+        c3.download_button("Order Bundle (PDF)", generate_multi_report(df, "ORDER", b_info), "Order_Bundle.pdf", use_container_width=True)
     else:
-        st.info("Please register assets to view analytics.")
+        st.warning("Dashboard empty. Please register assets in Tab 1.")
