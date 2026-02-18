@@ -1,4 +1,4 @@
-
+https://g.co/gemini/share/b97406b3ee0d 
 
 import streamlit as st
 import pandas as pd
@@ -59,7 +59,7 @@ def generate_multi_report(df, r_type):
     pdf.set_font("Arial", 'B', 14)
     
     if r_type == "ADMIN":
-        title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 20), ("Risk Cost", 35), ("Health %", 30), ("Next Service", 40)]
+        title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 20), ("Unit Cost", 30), ("Risk Cost", 30), ("Health %", 25), ("Next Service", 35)]
     elif r_type == "SUMMARY":
         title, cols = "ASSEMBLY SUMMARY REPORT", [("Asset Item", 90), ("Quantity", 40), ("Health Score", 55)]
     else:
@@ -77,9 +77,12 @@ def generate_multi_report(df, r_type):
     for _, row in df.iterrows():
         n_date = pd.to_datetime(row['Next_Service']).strftime('%d-%m-%Y') if pd.notna(row['Next_Service']) else "N/A"
         if r_type == "ADMIN":
-            pdf.cell(60, 8, str(row['Asset']), 1); pdf.cell(20, 8, str(int(row['Qty'])), 1, 0, 'C')
-            pdf.cell(35, 8, f"{row['Est. Repair Cost']:,.0f}", 1, 0, 'R'); pdf.cell(30, 8, f"{int(row['Predictive Score'])}%", 1, 0, 'C')
-            pdf.cell(40, 8, n_date, 1, 1, 'C')
+            pdf.cell(60, 8, str(row['Asset']), 1)
+            pdf.cell(20, 8, str(int(row['Qty'])), 1, 0, 'C')
+            pdf.cell(30, 8, f"{row['Unit Cost']:,.0f}", 1, 0, 'R')
+            pdf.cell(30, 8, f"{row['Est. Repair Cost']:,.0f}", 1, 0, 'R')
+            pdf.cell(25, 8, f"{int(row['Predictive Score'])}%", 1, 0, 'C')
+            pdf.cell(35, 8, n_date, 1, 1, 'C')
         elif r_type == "SUMMARY":
             pdf.cell(90, 8, str(row['Asset']), 1); pdf.cell(40, 8, str(int(row['Qty'])), 1, 0, 'C')
             pdf.cell(55, 8, f"{int(row['Predictive Score'])}%", 1, 1, 'C')
@@ -91,7 +94,7 @@ def generate_multi_report(df, r_type):
 # --- 4. DATA LOGIC & SESSION STATE ---
 if 'assets' not in st.session_state:
     st.session_state.assets = pd.DataFrame([
-        {"Asset": "Air Conditioners", "Qty": 20, "Avg Age (Yrs)": 3, "Last Service": "01-10-2023", "Warranty": "01-01-2025", "Term Value": 6, "Term Type": "Months"},
+        {"Asset": "Air Conditioners", "Qty": 20, "Unit Cost": 5000, "Avg Age (Yrs)": 3, "Last Service": "01-10-2023", "Warranty": "01-01-2025", "Term Value": 6, "Term Type": "Months"},
     ])
 
 with st.sidebar:
@@ -115,17 +118,22 @@ with tabs[0]:
 
     with st.expander("➕ Register New Asset"):
         with st.form("add_form"):
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c_cost = st.columns(4)
             a_name = c1.text_input("Asset Name")
             a_qty = c2.number_input("Quantity", min_value=1, value=1)
             a_age = c3.number_input("Age (Years)", min_value=0.0, value=1.0)
+            a_cost = c_cost.number_input("Unit Cost (Price per Item)", min_value=0.0, value=5000.0) # نیا کالم
+            
             c4, c5, c6, c7 = st.columns(4)
             a_svc = c4.date_input("Last Service Date")
             a_war = c5.date_input("Warranty Expiry")
             a_term_val = c6.number_input("Term Value", min_value=1, value=6)
             a_term_type = c7.selectbox("Term Type", ["Months", "Years"])
+            
             if st.form_submit_button("Add to Ledger"):
-                new_entry = {"Asset": a_name, "Qty": a_qty, "Avg Age (Yrs)": a_age, "Last Service": a_svc.strftime('%d-%m-%Y'), "Warranty": a_war.strftime('%d-%m-%Y'), "Term Value": a_term_val, "Term Type": a_term_type}
+                new_entry = {"Asset": a_name, "Qty": a_qty, "Unit Cost": a_cost, "Avg Age (Yrs)": a_age, 
+                            "Last Service": a_svc.strftime('%d-%m-%Y'), "Warranty": a_war.strftime('%d-%m-%Y'), 
+                            "Term Value": a_term_val, "Term Type": a_term_type}
                 st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_entry])], ignore_index=True)
                 st.rerun()
 
@@ -150,8 +158,11 @@ with tabs[2]:
     risk_df = sched_df.copy()
     risk_df['Avg Age (Yrs)'] = pd.to_numeric(risk_df['Avg Age (Yrs)'], errors='coerce').fillna(0)
     risk_df['Qty'] = pd.to_numeric(risk_df['Qty'], errors='coerce').fillna(1)
+    risk_df['Unit Cost'] = pd.to_numeric(risk_df['Unit Cost'], errors='coerce').fillna(0)
+    
     risk_df['Risk_F'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.7 if str(x).lower() == "expired" else 1.0)
-    risk_df['Est. Repair Cost'] = (risk_df['Risk_F'] * 5500) * (1 + parts_markup) * risk_df['Qty']
+    # اب کیلکولیشن آپ کی دی ہوئی یونٹ کاسٹ کے حساب سے ہوگی
+    risk_df['Est. Repair Cost'] = (risk_df['Unit Cost'] * (1 + parts_markup)) * risk_df['Qty']
     risk_df['Predictive Score'] = (100 - (risk_df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
 
     total_cost = risk_df['Est. Repair Cost'].sum()
@@ -166,7 +177,6 @@ with tabs[2]:
     st.divider()
     
     if not risk_df.empty:
-        # --- REINSTATED VISUAL CARDS & PROGRESS BARS ---
         st.subheader("📈 Risk vs. Cost Distribution")
         fig = px.bar(risk_df, x='Asset', y='Est. Repair Cost', color='Predictive Score', color_continuous_scale='RdYlGn', template="plotly_white", height=450)
         st.plotly_chart(fig, use_container_width=True)
