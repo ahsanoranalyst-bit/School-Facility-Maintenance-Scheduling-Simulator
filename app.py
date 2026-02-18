@@ -1,4 +1,4 @@
-https://g.co/gemini/share/b97406b3ee0d 
+
 
 import streamlit as st
 import pandas as pd
