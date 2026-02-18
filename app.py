@@ -59,7 +59,7 @@ def generate_multi_report(df, r_type):
     pdf.set_font("Arial", 'B', 14)
     
     if r_type == "ADMIN":
-        title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 20), ("Unit Cost", 30), ("Risk Cost", 30), ("Health %", 25), ("Next Service", 35)]
+        title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 15), ("Unit Cost", 25), ("Risk Cost", 30), ("Health %", 25), ("Next Service", 35)]
     elif r_type == "SUMMARY":
         title, cols = "ASSEMBLY SUMMARY REPORT", [("Asset Item", 90), ("Quantity", 40), ("Health Score", 55)]
     else:
@@ -69,7 +69,7 @@ def generate_multi_report(df, r_type):
     pdf.cell(0, 10, title, ln=True, align='L')
     pdf.set_font("Arial", 'I', 9); pdf.cell(0, 5, f"Report Date: {datetime.now().strftime('%d-%m-%Y')}", ln=True); pdf.ln(5)
 
-    pdf.set_fill_color(46, 117, 182); pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 9)
+    pdf.set_fill_color(46, 117, 182); pdf.set_text_color(255, 255, 255); pdf.set_font("Arial", 'B', 8)
     for txt, w in cols: pdf.cell(w, 10, txt, 1, 0, 'C', True)
     pdf.ln()
 
@@ -78,8 +78,8 @@ def generate_multi_report(df, r_type):
         n_date = pd.to_datetime(row['Next_Service']).strftime('%d-%m-%Y') if pd.notna(row['Next_Service']) else "N/A"
         if r_type == "ADMIN":
             pdf.cell(60, 8, str(row['Asset']), 1)
-            pdf.cell(20, 8, str(int(row['Qty'])), 1, 0, 'C')
-            pdf.cell(30, 8, f"{row['Unit Cost']:,.0f}", 1, 0, 'R')
+            pdf.cell(15, 8, str(int(row['Qty'])), 1, 0, 'C')
+            pdf.cell(25, 8, f"{row['Unit Cost']:,.0f}", 1, 0, 'R')
             pdf.cell(30, 8, f"{row['Est. Repair Cost']:,.0f}", 1, 0, 'R')
             pdf.cell(25, 8, f"{int(row['Predictive Score'])}%", 1, 0, 'C')
             pdf.cell(35, 8, n_date, 1, 1, 'C')
@@ -102,7 +102,10 @@ with st.sidebar:
     st.divider()
     st.subheader("💰 Financial Budget")
     starting_balance = st.number_input("Starting Balance", min_value=0, value=1000000)
-    parts_markup = st.slider("Parts Buffer (%)", 1, 200, 20) / 100
+    
+    # --- FIXED: Starts from 0 instead of 1 ---
+    parts_markup = st.slider("Parts Buffer (%)", 0, 200, 20) / 100
+    
     if st.button("🔴 Logout", use_container_width=True):
         st.session_state.clear()
         st.rerun()
@@ -122,7 +125,7 @@ with tabs[0]:
             a_name = c1.text_input("Asset Name")
             a_qty = c2.number_input("Quantity", min_value=1, value=1)
             a_age = c3.number_input("Age (Years)", min_value=0.0, value=1.0)
-            a_cost = c_cost.number_input("Unit Cost (Price per Item)", min_value=0.0, value=5000.0) # نیا کالم
+            a_cost = c_cost.number_input("Unit Cost", min_value=0.0, value=0.0)
             
             c4, c5, c6, c7 = st.columns(4)
             a_svc = c4.date_input("Last Service Date")
@@ -161,7 +164,6 @@ with tabs[2]:
     risk_df['Unit Cost'] = pd.to_numeric(risk_df['Unit Cost'], errors='coerce').fillna(0)
     
     risk_df['Risk_F'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.7 if str(x).lower() == "expired" else 1.0)
-    # اب کیلکولیشن آپ کی دی ہوئی یونٹ کاسٹ کے حساب سے ہوگی
     risk_df['Est. Repair Cost'] = (risk_df['Unit Cost'] * (1 + parts_markup)) * risk_df['Qty']
     risk_df['Predictive Score'] = (100 - (risk_df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
 
