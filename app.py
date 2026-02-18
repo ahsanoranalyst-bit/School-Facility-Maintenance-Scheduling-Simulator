@@ -1,6 +1,3 @@
-
-
-
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -106,7 +103,17 @@ tabs = st.tabs(["📋 Inventory Management", "📅 Maintenance Schedule", "📊 
 
 with tabs[0]:
     st.header("Asset Registry")
-    with st.expander("➕ Register New Asset Details"):
+    
+    # --- RESTORED: EXCEL/CSV IMPORT OPTION ---
+    up = st.file_uploader("📂 Import Assets (Excel or CSV)", type=["xlsx", "csv"])
+    if up:
+        try:
+            st.session_state.assets = pd.read_excel(up) if up.name.endswith('xlsx') else pd.read_csv(up)
+            st.success("File Imported Successfully!")
+        except Exception as e:
+            st.error(f"Error importing file: {e}")
+
+    with st.expander("➕ Register New Asset Details Manually"):
         with st.form("asset_form"):
             c1, c2, c3 = st.columns(3)
             name = c1.text_input("Asset Name")
@@ -121,6 +128,7 @@ with tabs[0]:
                             "Last Service": ls_date.strftime('%d-%m-%Y'), "Warranty": wr_date.strftime('%d-%m-%Y')}
                 st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_data])], ignore_index=True)
                 st.rerun()
+    
     st.subheader("Inventory Ledger")
     st.session_state.assets = st.data_editor(st.session_state.assets, num_rows="dynamic", use_container_width=True)
 
@@ -136,14 +144,13 @@ with tabs[2]:
     st.title("Strategic Risk & Financial Analytics")
     if not st.session_state.assets.empty:
         df = st.session_state.assets.copy()
-        df['Final_Cost'] = (df['Qty'] * df['Service Cost']) * (1 + parts_markup)
+        df['Final_Cost'] = (pd.to_numeric(df['Qty'], errors='coerce').fillna(0) * pd.to_numeric(df['Service Cost'], errors='coerce').fillna(0)) * (1 + parts_markup)
         df['Risk_Factor'] = pd.to_numeric(df['Avg Age (Yrs)'], errors='coerce').fillna(0) * 1.5
         df['Predictive Score'] = (100 - (df['Risk_Factor'] * 5)).clip(lower=5, upper=100).astype(int)
         
         total_exp = df['Final_Cost'].sum()
         balance = total_budget - total_exp
         
-        # FIXED: Metrics area is expanded to prevent text cutting
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.markdown(f"**Financial Exposure** \n### Rs. {total_exp:,.0f}")
         m2.markdown(f"**Remaining Balance** \n### Rs. {balance:,.0f}")
@@ -156,7 +163,6 @@ with tabs[2]:
         fig = px.bar(df, x="Asset", y="Final_Cost", color="Predictive Score", color_continuous_scale='RdYlGn', labels={'Final_Cost': 'Total Cost (Rs.)'})
         st.plotly_chart(fig, use_container_width=True)
         
-        # RESTORED: Three PDF Report Buttons
         st.divider()
         st.subheader("📥 Export Departmental Reports")
         c1, c2, c3 = st.columns(3)
