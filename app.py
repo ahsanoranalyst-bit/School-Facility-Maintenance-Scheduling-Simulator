@@ -35,7 +35,7 @@ if st.session_state.auth and not st.session_state.org_name:
                 st.rerun()
     st.stop()
 
-# --- 3. PDF REPORT ENGINE ---
+# --- 3. PDF REPORT ENGINE (With DD-MM-YYYY Format) ---
 class FacilityPDF(FPDF):
     def header(self):
         self.set_fill_color(31, 78, 121)
@@ -88,14 +88,15 @@ with st.sidebar:
     st.title(f"🏢 {st.session_state.org_name}")
     st.divider()
     total_budget = st.number_input("💰 Available Budget (Rs.)", min_value=0.0, value=1000000.0)
-    profit_perc = st.slider("📈 Profit Margin (%)", 0, 200, 20)
+    # Profit level from 1 to 200
+    profit_perc = st.slider("📈 Profit Margin (%)", 1, 200, 20) 
     st.divider()
     if st.button("🔴 Logout"):
         st.session_state.clear()
         st.rerun()
 
 # --- 6. MAIN INTERFACE ---
-tabs = st.tabs(["📋 Inventory Management", "📊 Financial Analytics", "📅 Maintenance Logs"])
+tabs = st.tabs(["📋 Inventory Management", "📊 Financial Analytics"])
 
 with tabs[0]:
     st.header("Asset Registry")
@@ -111,20 +112,23 @@ with tabs[0]:
             age_unit = c5.selectbox("Time Unit", ["Years", "Months"])
             
             c6, c7 = st.columns(2)
-            last_service = c6.date_input("Last Service Date") # Re-added field
-            warranty = c7.date_input("Warranty Expiry Date")
+            # Date Input for selection
+            ls_date = c6.date_input("Last Service Date")
+            wr_date = c7.date_input("Warranty Expiry Date")
             
             if st.form_submit_button("Add to Inventory"):
+                # Saving in DD-MM-YYYY format
                 new_data = {
                     "Asset": name, "Qty": qty, "Age Value": age_val, 
                     "Age Unit": age_unit, "Service Cost": cost, 
-                    "Last Service": last_service.strftime('%Y-%m-%d'),
-                    "Warranty": warranty.strftime('%Y-%m-%d')
+                    "Last Service": ls_date.strftime('%d-%m-%Y'), # Corrected Format
+                    "Warranty": wr_date.strftime('%d-%m-%Y') # Corrected Format
                 }
                 st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_data])], ignore_index=True)
                 st.rerun()
 
     st.subheader("Inventory Ledger")
+    # Displaying the table with dates in DD-MM-YYYY
     st.session_state.assets = st.data_editor(st.session_state.assets, num_rows="dynamic", use_container_width=True)
 
 with tabs[1]:
@@ -136,27 +140,27 @@ with tabs[1]:
         df['Markup'] = df['Base_Total'] * (profit_perc / 100)
         df['Final_Total'] = df['Base_Total'] + df['Markup']
         
-        # Predictive Score Logic (5th Point)
+        # Predictive Score Logic (Specified as 5th Point)
         df['Years'] = df.apply(lambda x: x['Age Value'] if x['Age Unit']=="Years" else x['Age Value']/12, axis=1)
         df['Predictive Score'] = (100 - (df['Years'] * 7.5)).clip(lower=5, upper=100)
         
         total_exp = df['Final_Total'].sum()
         balance = total_budget - total_exp
         
-        # Dashboard
+        # Dashboard Analytics
         m1, m2, m3, m4, m5 = st.columns(5)
         m1.metric("Available Budget", f"Rs. {total_budget:,.0f}")
         m2.metric("Total Expense", f"Rs. {total_exp:,.0f}")
-        m3.metric("Remaining", f"Rs. {balance:,.0f}", delta="Balance")
+        m3.metric("Remaining", f"Rs. {balance:,.0f}")
         m4.metric("Avg Health", f"{int(df['Predictive Score'].mean())}%")
-        m5.metric("Predictive Score", f"{int(df['Predictive Score'].min())}%", help="Critical health score indicator")
+        # 5th Point: Predictive Score
+        m5.metric("Predictive Score", f"{int(df['Predictive Score'].min())}%", help="Calculated based on asset age")
         
         st.divider()
         
-        # PDF Generation
+        # PDF Generation with correct date formatting
         budget_summary = {"total": total_budget, "spent": total_exp, "remaining": balance}
         pdf_bytes = generate_pdf_report(df, budget_summary)
         st.download_button("📥 Download PDF Audit Report", pdf_bytes, "Facility_Audit.pdf", "application/pdf")
-        
     else:
         st.info("No data found. Please add assets in the Inventory tab.")
