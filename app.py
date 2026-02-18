@@ -58,7 +58,6 @@ def generate_multi_report(df, r_type):
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("Arial", 'B', 14)
     
-    # 5th Point logic: Predictive Score/Health %
     if r_type == "ADMIN":
         title, cols = "EXECUTIVE ADMINISTRATIVE AUDIT", [("Asset Item", 60), ("Qty", 20), ("Risk Cost", 35), ("Health %", 30), ("Next Service", 40)]
     elif r_type == "SUMMARY":
@@ -76,13 +75,11 @@ def generate_multi_report(df, r_type):
 
     pdf.set_text_color(0, 0, 0); pdf.set_font("Arial", '', 8)
     for _, row in df.iterrows():
-        # --- FIXED DATE FORMATTING FOR PDF (DD-MM-YYYY) ---
         n_date = pd.to_datetime(row['Next_Service']).strftime('%d-%m-%Y') if pd.notna(row['Next_Service']) else "N/A"
-        
         if r_type == "ADMIN":
             pdf.cell(60, 8, str(row['Asset']), 1); pdf.cell(20, 8, str(int(row['Qty'])), 1, 0, 'C')
             pdf.cell(35, 8, f"{row['Est. Repair Cost']:,.0f}", 1, 0, 'R'); pdf.cell(30, 8, f"{int(row['Predictive Score'])}%", 1, 0, 'C')
-            pdf.cell(40, 8, n_date, 1, 1, 'C') # Next Service in DD-MM-YYYY
+            pdf.cell(40, 8, n_date, 1, 1, 'C')
         elif r_type == "SUMMARY":
             pdf.cell(90, 8, str(row['Asset']), 1); pdf.cell(40, 8, str(int(row['Qty'])), 1, 0, 'C')
             pdf.cell(55, 8, f"{int(row['Predictive Score'])}%", 1, 1, 'C')
@@ -122,18 +119,13 @@ with tabs[0]:
             a_name = c1.text_input("Asset Name")
             a_qty = c2.number_input("Quantity", min_value=1, value=1)
             a_age = c3.number_input("Age (Years)", min_value=0.0, value=1.0)
-            
             c4, c5, c6, c7 = st.columns(4)
             a_svc = c4.date_input("Last Service Date")
             a_war = c5.date_input("Warranty Expiry")
             a_term_val = c6.number_input("Term Value", min_value=1, value=6)
             a_term_type = c7.selectbox("Term Type", ["Months", "Years"])
-            
             if st.form_submit_button("Add to Ledger"):
-                new_entry = {"Asset": a_name, "Qty": a_qty, "Avg Age (Yrs)": a_age,
-                            "Last Service": a_svc.strftime('%d-%m-%Y'),
-                            "Warranty": a_war.strftime('%d-%m-%Y'),
-                            "Term Value": a_term_val, "Term Type": a_term_type}
+                new_entry = {"Asset": a_name, "Qty": a_qty, "Avg Age (Yrs)": a_age, "Last Service": a_svc.strftime('%d-%m-%Y'), "Warranty": a_war.strftime('%d-%m-%Y'), "Term Value": a_term_val, "Term Type": a_term_type}
                 st.session_state.assets = pd.concat([st.session_state.assets, pd.DataFrame([new_entry])], ignore_index=True)
                 st.rerun()
 
@@ -143,13 +135,11 @@ with tabs[1]:
     st.subheader("Automated Service Forecast")
     sched_df = st.session_state.assets.copy().dropna(subset=['Asset'])
     sched_df['Last Service Date'] = pd.to_datetime(sched_df['Last Service'], dayfirst=True, errors='coerce')
-    
     def calc_next(r):
         if pd.isna(r['Last Service Date']): return None
         val = int(r['Term Value'])
         days = val * 30 if r['Term Type'] == "Months" else val * 365
         return (r['Last Service Date'] + timedelta(days=days)).date()
-
     sched_df['Next_Service'] = sched_df.apply(calc_next, axis=1)
     display_df = sched_df[['Asset', 'Term Value', 'Term Type', 'Last Service', 'Next_Service']].copy()
     display_df['Next_Service'] = pd.to_datetime(display_df['Next_Service']).dt.strftime('%d-%m-%Y')
@@ -160,7 +150,6 @@ with tabs[2]:
     risk_df = sched_df.copy()
     risk_df['Avg Age (Yrs)'] = pd.to_numeric(risk_df['Avg Age (Yrs)'], errors='coerce').fillna(0)
     risk_df['Qty'] = pd.to_numeric(risk_df['Qty'], errors='coerce').fillna(1)
-    
     risk_df['Risk_F'] = risk_df['Avg Age (Yrs)'] * risk_df['Warranty'].apply(lambda x: 1.7 if str(x).lower() == "expired" else 1.0)
     risk_df['Est. Repair Cost'] = (risk_df['Risk_F'] * 5500) * (1 + parts_markup) * risk_df['Qty']
     risk_df['Predictive Score'] = (100 - (risk_df['Risk_F'] * 6)).clip(lower=5, upper=100).astype(int)
@@ -177,9 +166,24 @@ with tabs[2]:
     st.divider()
     
     if not risk_df.empty:
-        st.subheader("📥 Export Departmental Reports")
-        c1, c2, c3 = st.columns(3)
-        # Reports will now use the DD-MM-YYYY format for the service dates
-        c1.download_button("Admin Audit Report", generate_multi_report(risk_df, "ADMIN"), "Admin_Audit.pdf", use_container_width=True)
-        c2.download_button("Asset Summary PDF", generate_multi_report(risk_df, "SUMMARY"), "Summary.pdf", use_container_width=True)
-        c3.download_button("Critical Orders List", generate_multi_report(risk_df, "ORDER"), "Orders.pdf", use_container_width=True)
+        # --- REINSTATED VISUAL CARDS & PROGRESS BARS ---
+        st.subheader("📈 Risk vs. Cost Distribution")
+        fig = px.bar(risk_df, x='Asset', y='Est. Repair Cost', color='Predictive Score', color_continuous_scale='RdYlGn', template="plotly_white", height=450)
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.divider()
+        st.subheader("🛠️ Detailed Asset Health Monitoring")
+        cols = st.columns(3)
+        for i, (idx, r) in enumerate(risk_df.iterrows()):
+            with cols[i % 3]:
+                with st.container(border=True):
+                    st.write(f"**{r['Asset']}**")
+                    st.progress(r['Predictive Score']/100)
+                    st.caption(f"Health: {r['Predictive Score']}% | Cost: {r['Est. Repair Cost']:,.0f}")
+
+    st.divider()
+    st.subheader("📥 Export Departmental Reports")
+    c1, c2, c3 = st.columns(3)
+    c1.download_button("Admin Audit Report", generate_multi_report(risk_df, "ADMIN"), "Admin_Audit.pdf", use_container_width=True)
+    c2.download_button("Asset Summary PDF", generate_multi_report(risk_df, "SUMMARY"), "Summary.pdf", use_container_width=True)
+    c3.download_button("Critical Orders List", generate_multi_report(risk_df, "ORDER"), "Orders.pdf", use_container_width=True)
