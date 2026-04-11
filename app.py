@@ -10,7 +10,7 @@ basic_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/ba3a76f7-4acc-4
 premium_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/6245738f-4d29-4a0a-a574-e9a0e8838124"
 website_url = "https://sysintel.vercel.app/"
 whatsapp_url = "https://wa.me/923245277654"
-google_url = "https://sysintel.vercel.app/"
+google_url = "https://www.ahsanoranalyst.online/home
 
 # 2. Advanced UI Styling (CSS)
 st.markdown(f"""
@@ -152,6 +152,7 @@ with st.sidebar:
     # Glowing Action Buttons
     st.markdown(f'<a href="{whatsapp_url}" target="_blank" class="sidebar-btn">💬 WHATSAPP SUPPORT</a>', unsafe_allow_html=True)
     st.markdown(f'<a href="{website_url}" target="_blank" class="sidebar-btn">🌐 OFFICIAL WEBSITE</a>', unsafe_allow_html=True)
+    st.markdown(f'<a href="{website_url}" target="_blank" class="sidebar-btn">🌐 GOOGLE LIBARAY</a>', unsafe_allow_html=True)
     st.markdown("---")
    
     if st.session_state.selected_industry:
