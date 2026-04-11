@@ -9,6 +9,7 @@ st.set_page_config(page_title="System Intelligence | Ahsan Khan", layout="wide",
 basic_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/ba3a76f7-4acc-4643-a838-9dc4085af6dc"
 premium_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/6245738f-4d29-4a0a-a574-e9a0e8838124"
 website_url = "https://sysintel.vercel.app/"
+website_url = "https://sysintel.vercel.app/"
 whatsapp_url = "https://wa.me/923245277654"
 
 # 2. Advanced UI Styling (CSS)
@@ -233,7 +234,7 @@ with p2:
     st.markdown(f"""
     <div class="pricing-card premium-card">
         <div>
-            <h3 style="color:#ffd700;">Enterprise ProE</h3>
+            <h3 style="color:#ffd700;">Enterprise Pro</h3>
             <div style="font-size: 32px; color: white; font-weight: bold;">$499 <span style="font-size:16px; color:#ffd700; text-decoration:line-through;">$750</span></div>
             <p style="color:#ffd700;">Full Optimization Power - Save 27%</p>
             <ul style="color:white; text-align:left; list-style:none; padding:0; font-size:15px; line-height:2.6;">
