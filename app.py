@@ -152,7 +152,7 @@ with st.sidebar:
     # Glowing Action Buttons
     st.markdown(f'<a href="{whatsapp_url}" target="_blank" class="sidebar-btn">💬 WHATSAPP SUPPORT</a>', unsafe_allow_html=True)
     st.markdown(f'<a href="{website_url}" target="_blank" class="sidebar-btn">🌐 OFFICIAL WEBSITE</a>', unsafe_allow_html=True)
-    st.markdown(f'<a href="{website_url}" target="_blank" class="sidebar-btn">🌐 GOOGLE LIBARAY</a>', unsafe_allow_html=True)
+    st.markdown(f'<a href="{google_url}" target="_blank" class="sidebar-btn">🌐 GOOGLE LIBARAY</a>', unsafe_allow_html=True)
     st.markdown("---")
    
     if st.session_state.selected_industry:
