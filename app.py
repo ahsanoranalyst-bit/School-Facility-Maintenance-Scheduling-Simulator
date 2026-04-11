@@ -9,7 +9,7 @@ st.set_page_config(page_title="System Intelligence | Ahsan Khan", layout="wide",
 basic_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/ba3a76f7-4acc-4643-a838-9dc4085af6dc"
 premium_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/6245738f-4d29-4a0a-a574-e9a0e8838124"
 website_url = "https://sysintel.vercel.app/"
-website_url = "https://www.ahsanoranalyst.online/home/"
+
 whatsapp_url = "https://wa.me/923245277654"
 
 # 2. Advanced UI Styling (CSS)
