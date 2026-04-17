@@ -11,7 +11,7 @@ st.set_page_config(
 # --- Constants & Asset Links ---
 WHATSAPP_LINK = "https://wa.me/923245277654"
 WEBSITE_LINK = "https://www.ahsanoranalyst.online/"
-LOGOUT_REDIRECT_URL = "https://your-vercel-project.vercel.app" # Replace with your actual Vercel link
+LOGOUT_REDIRECT_URL = "https://edusi.vercel.app/" # Replace with your actual Vercel link
 YOUTUBE_ID = "aDIUEaVF8v4" 
 
 # 2. Advanced CSS for Symmetry, HD UI, and Logout Styling
