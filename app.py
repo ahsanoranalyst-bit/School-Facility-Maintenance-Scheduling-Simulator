@@ -1,161 +1,170 @@
 import streamlit as st
-import os
 
-# 1. Page Configuration
-st.set_page_config(page_title="System Intelligence | EduSi Core", layout="wide", page_icon="💠")
+# 1. Page Config
+st.set_page_config(page_title="System Intelligence | Core Engine", layout="wide", page_icon="💠")
 
-# --- URLs & Pricing ---
+# --- URLs ---
 whatsapp_url = "https://wa.me/923245277654"
-basic_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/ba3a76f7-4acc-4643-a838-9dc4085af6dc"
-premium_doc_url = "https://ahsankhan.lemonsqueezy.com/checkout/buy/6245738f-4d29-4a0a-a574-e9a0e8838124"
+video_id = "aDIUEaVF8v4"
 
-# 2. Complete HTML/CSS UI Injection
+# 2. Extreme CSS Injection (Streamlit Overhaul)
 st.markdown(f"""
     <style>
-        /* Base Styling */
+        /* Global Background */
         .stApp {{
-            background: radial-gradient(circle at top center, #0a111a 0%, #050505 100%);
-            color: #ffffff;
+            background: #050505 !important;
+            color: #ffffff !important;
         }}
 
-        /* --- LOGO BLINKING EFFECT --- */
-        .header-section {{ padding: 20px 0; text-align: center; }}
-        .logo-ring {{
-            width: 90px; height: 90px; margin: 0 auto;
+        /* --- SIDEBAR LOGO & STYLE --- */
+        [data-testid="stSidebar"] {{
+            background-color: #080808 !important;
+            border-right: 2px solid #00f2ff !important;
+            padding-top: 20px;
+        }}
+        
+        .sidebar-logo-ring {{
+            width: 80px; height: 80px; margin: 0 auto;
             border: 2px solid #00f2ff; border-radius: 50%;
             display: flex; justify-content: center; align-items: center;
-            background: rgba(0, 0, 0, 0.8);
-            box-shadow: 0 0 15px rgba(0, 242, 255, 0.3);
-            transition: all 0.4s ease;
-            cursor: pointer;
-            animation: blink-glow 1.5s infinite alternate;
+            box-shadow: 0 0 20px #00f2ff;
+            animation: pulse-glow 2s infinite alternate;
         }}
-        @keyframes blink-glow {{
-            from {{ opacity: 1; box-shadow: 0 0 10px #00f2ff; }}
-            to {{ opacity: 0.8; box-shadow: 0 0 35px #00f2ff; }}
+        @keyframes pulse-glow {{
+            from {{ box-shadow: 0 0 10px #00f2ff; transform: scale(1); }}
+            to {{ box-shadow: 0 0 30px #00f2ff; transform: scale(1.05); }}
         }}
-        .logo-ring h2 {{ color: #00f2ff; margin: 0; font-size: 1.4rem; letter-spacing: 1px; }}
+        .sidebar-logo-ring h2 {{ color: #00f2ff; margin: 0; font-family: 'Orbitron', sans-serif; }}
 
-        /* --- BANNER ZOOM EFFECT --- */
-        .banner-container {{ 
-            width: 100%; border-radius: 15px; overflow: hidden; 
-            border: 1px solid rgba(0, 242, 255, 0.2); margin-bottom: 30px;
+        /* --- VIDEO BANNER --- */
+        .video-wrapper {{
+            width: 100%; height: 400px; border-radius: 15px; 
+            border: 1px solid #00f2ff; overflow: hidden; margin-bottom: 40px;
+            box-shadow: 0 0 15px rgba(0, 242, 255, 0.2);
         }}
-        .banner-container img {{ 
-            width: 100%; transition: transform 0.8s ease, filter 0.8s ease;
-            filter: brightness(0.7);
+
+        /* --- PRICE TABLE DESIGN --- */
+        .glass-table {{
+            width: 100%; border-collapse: collapse; background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px; overflow: hidden; border: 1px solid rgba(0, 242, 255, 0.2);
         }}
-        .banner-container:hover img {{ transform: scale(1.05); filter: brightness(1); }}
+        .glass-table th {{ background: rgba(0, 242, 255, 0.1); color: #00f2ff; padding: 20px; text-align: left; }}
+        .glass-table td {{ padding: 18px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ddd; }}
 
-        /* --- PRICE TABLE --- */
-        .price-table {{ width: 100%; border-collapse: collapse; margin: 20px 0; background: rgba(255,255,255,0.03); border-radius: 10px; overflow: hidden; }}
-        .price-table th {{ background: rgba(0, 242, 255, 0.1); color: #00f2ff; padding: 15px; text-align: left; }}
-        .price-table td {{ padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); color: #ccc; }}
-
-        /* --- GRID CARDS --- */
-        .feature-card {{
-            background: rgba(255, 255, 255, 0.03); padding: 25px; border-radius: 12px;
-            border: 1px solid rgba(0, 242, 255, 0.2); text-align: left; transition: all 0.4s ease;
-            height: 180px;
+        /* --- NEON BUTTONS & CARDS --- */
+        div.stButton > button {{
+            background: transparent !important;
+            color: #00f2ff !important;
+            border: 1px solid #00f2ff !important;
+            width: 100%;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.4s;
+            animation: button-blink 2s infinite ease-in-out;
         }}
-        .feature-card:hover {{ border-color: #00f2ff; transform: translateY(-8px); background: rgba(0, 242, 254, 0.08); }}
-        .feature-card h3 {{ color: #ffd700; margin: 0 0 10px; font-size: 1.1rem; text-transform: uppercase; }}
-        .feature-card p {{ color: #aaa; font-size: 0.85rem; margin: 0; }}
+        @keyframes button-blink {{
+            0% {{ border-color: #00f2ff; box-shadow: 0 0 5px #00f2ff; }}
+            50% {{ border-color: #ffd700; box-shadow: 0 0 15px #ffd700; }}
+            100% {{ border-color: #00f2ff; box-shadow: 0 0 5px #00f2ff; }}
+        }}
+        div.stButton > button:hover {{
+            background: #00f2ff !important;
+            color: #000 !important;
+            box-shadow: 0 0 30px #00f2ff !important;
+            transform: translateY(-3px);
+        }}
 
-        /* Hide Streamlit elements to keep it clean */
-        #MainMenu {{visibility: hidden;}}
-        footer {{visibility: hidden;}}
+        /* Industry Card Style */
+        .card-box {{
+            background: rgba(255, 255, 255, 0.02);
+            padding: 20px; border-radius: 10px;
+            border-left: 3px solid #00f2ff;
+            margin-bottom: 10px;
+        }}
+        .card-box h3 {{ color: #ffd700; font-size: 1.1rem; margin: 0; }}
+        .card-box p {{ color: #888; font-size: 0.8rem; margin: 5px 0 0 0; }}
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar Configuration
+# 3. Sidebar Logic
 with st.sidebar:
-    st.markdown("""
-        <div class="logo-ring"><h2>SI</h2></div>
-        <p style='text-align:center; color:#00f2ff; font-weight:bold; margin-top:10px;'>CORE ENGINE V3.0</p>
-    """, unsafe_allow_html=True)
-    st.markdown(f'<a href="{whatsapp_url}" style="text-decoration:none;"><div style="padding:10px; border:1px solid #00f2ff; color:#00f2ff; text-align:center; border-radius:5px;">💬 CONNECT SUPPORT</div></a>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-logo-ring"><h2>SI</h2></div>', unsafe_allow_html=True)
+    st.markdown("<h3 style='text-align:center; color:#00f2ff;'>SYSTEM INTELLIGENCE</h3>", unsafe_allow_html=True)
     st.markdown("---")
+    st.page_link("app.py", label="🏠 Main Dashboard", icon="⚡")
+    st.markdown(f'<a href="{whatsapp_url}" style="text-decoration:none;"><div style="padding:10px; border:1px solid #00f2ff; color:#00f2ff; text-align:center; border-radius:5px; margin-top:20px;">💬 WHATSAPP CONNECT</div></a>', unsafe_allow_html=True)
 
-# 4. State Management
-if 'page' not in st.session_state:
-    st.session_state.page = "Dashboard"
+# 4. Main Dashboard UI
+st.markdown("<h1 style='text-align:center; color:#00f2ff; letter-spacing:5px;'>EDU-SI ENGINE</h1>", unsafe_allow_html=True)
 
-# 5. Dashboard View
-if st.session_state.page == "Dashboard":
-    # Header & Logo
-    st.markdown('<div class="header-section"><div class="logo-ring"><h2>EduSi</h2></div></div>', unsafe_allow_html=True)
-    st.markdown("<h1 style='text-align:center; color:#00f2ff; letter-spacing:3px;'>SYSTEM INTELLIGENCE</h1>", unsafe_allow_html=True)
-    
-    # Banner (Wallpaper with Hover Effect)
-    st.markdown(f"""
-        <div class="banner-container">
-            <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80" alt="Banner">
-        </div>
-    """, unsafe_allow_html=True)
+# YouTube Wallpaper Video
+st.markdown(f"""
+    <div class="video-wrapper">
+        <iframe width="100%" height="100%" src="https://www.youtube.com/embed/{video_id}?autoplay=1&mute=1&loop=1&playlist={video_id}&controls=0" 
+        frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+""", unsafe_allow_html=True)
 
-    # Fee Structure Table
-    st.markdown("<h3 style='color:#00f2ff; border-left: 4px solid #00f2ff; padding-left: 10px;'>ACADEMIC OPTIMIZATION FEES</h3>", unsafe_allow_html=True)
-    st.markdown("""
-        <table class="price-table">
-            <tr><th>Level</th><th>Format</th><th>Fee (PKR)</th></tr>
-            <tr><td>Class 1-8</td><td>Home / Online</td><td>4,000 - 6,000</td></tr>
-            <tr><td>Matric / O-Levels</td><td>Academy / Home</td><td>6,000 - 10,000</td></tr>
-            <tr><td>FSc / A-Levels</td><td>Live Interactive</td><td>10,000 - 15,000</td></tr>
-        </table>
-    """, unsafe_allow_html=True)
+# 5. Price Structure Section
+st.markdown("<h2 style='color:#ffd700;'>📊 Academic Optimization Core</h2>", unsafe_allow_html=True)
+st.markdown("""
+    <table class="glass-table">
+        <tr><th>Category</th><th>Session Type</th><th>Fee Structure (PKR)</th></tr>
+        <tr><td>Primary (1-8)</td><td>Individual / Group</td><td>4,000 - 6,000</td></tr>
+        <tr><td>Matric / O-Levels</td><td>Advanced Prep</td><td>6,000 - 10,000</td></tr>
+        <tr><td>FSc / A-Levels</td><td>Professional Logic</td><td>10,000 - 15,000</td></tr>
+    </table>
+    <p style='color:#00f2ff; font-size:13px; margin-top:10px;'>* Reward: Cash prizes for top 6 performers authorized by System Intelligence.</p>
+""", unsafe_allow_html=True)
 
-    # 22 Intelligence Modules Grid
-    st.markdown("<h3 style='color:#00f2ff; margin-top:40px; border-left: 4px solid #00f2ff; padding-left: 10px;'>INTELLIGENCE MODULES</h3>", unsafe_allow_html=True)
-    
-    modules = [
-        ("Grades 1-12", "Tracking primary & secondary excellence."),
-        ("FSC & O-Level", "Targeted board exam optimization."),
-        ("A-Level (Cambridge)", "Advanced resource integration."),
-        ("University Guidance", "Strategic success analysis."),
-        ("Digital Notes", "Structured subject knowledge base."),
-        ("Resource Library", "Premium global academic content."),
-        ("Free Book Access", "Deterministic equity allocation."),
-        ("Curriculum Guides", "Adaptive board roadmaps."),
-        ("Online Tuition", "Virtual learning environments."),
-        ("Exam Prep", "Logic-based stress analysis."),
-        ("Creative Thinking", "Heuristic problem-solving models."),
-        ("Skill Development", "Future-ready masterclasses."),
-        ("Critical Thinking", "Advanced cognitive logic training."),
-        ("Training Enhance", "Continuous growth feedback loops."),
-        ("Home Tuition", "Smart tutor matching algorithms."),
-        ("Academy Classes", "Physical learning hub management."),
-        ("Live Tuition", "Real-time data-driven teaching."),
-        ("Peer Learning", "Collaborative study networks."),
-        ("Scholarships", "Data-driven funding support."),
-        ("Science & Tech", "Specialized STEM master modules."),
-        ("STEM Language", "Technical communication & coding."),
-        ("Project & Thesis", "University research support.")
-    ]
+# 6. 22 Industry Modules Grid
+st.markdown("<h2 style='color:#00f2ff; margin-top:50px;'>🛠 Intelligence Modules</h2>", unsafe_allow_html=True)
 
-    # Grid Display
-    for i in range(0, len(modules), 3):
-        cols = st.columns(3)
-        for j in range(3):
-            if i + j < len(modules):
-                title, desc = modules[i+j]
-                with cols[j]:
-                    st.markdown(f"""
-                        <div class="feature-card">
-                            <h3>{title}</h3>
-                            <p>{desc}</p>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    if st.button(f"Sync {title}", key=f"mod_{i+j}", use_container_width=True):
-                        st.session_state.page = title
-                        st.rerun()
+modules = [
+    ("Grades 1-12", "Tracking excellence."), ("FSC & O-Level", "Exam optimization."),
+    ("A-Level Prep", "Resource integration."), ("Uni Guidance", "Strategic analysis."),
+    ("Digital Notes", "Knowledge base."), ("Resource Lib", "Global content."),
+    ("Free Books", "Equity allocation."), ("Curriculum", "Adaptive roadmaps."),
+    ("Online Tuition", "Virtual environments."), ("Exam Prep", "Stress analysis."),
+    ("Creative Lab", "Heuristic models."), ("Skill Dev", "Masterclasses."),
+    ("Critical Thinking", "Logic training."), ("Training+", "Growth feedback."),
+    ("Home Tuition", "Smart matching."), ("Academy Core", "Hub management."),
+    ("Live Classes", "Data-driven teaching."), ("Peer Learn", "Study networks."),
+    ("Scholarships", "Funding support."), ("STEM Master", "Specialized tech."),
+    ("STEM Language", "Coding logic."), ("Thesis Support", "Research engine.")
+]
 
-# 6. Pricing Deployment
+# Generate Grid
+for i in range(0, len(modules), 3):
+    cols = st.columns(3)
+    for j in range(3):
+        if i + j < len(modules):
+            title, desc = modules[i+j]
+            with cols[j]:
+                st.markdown(f"""
+                    <div class="card-box">
+                        <h3>{title}</h3>
+                        <p>{desc}</p>
+                    </div>
+                """, unsafe_allow_html=True)
+                # Blinking Button
+                if st.button(f"Deploy {title}", key=f"mod_{i+j}"):
+                    st.write(f"System Intelligence: {title} Module Activated.")
+
+# 7. Pricing License Section
 st.markdown("---")
-col_p1, col_p2 = st.columns(2)
-with col_p1:
-    st.markdown(f'<a href="{basic_doc_url}" style="text-decoration:none;"><div style="padding:20px; border:1px solid #ccc; text-align:center; border-radius:10px; color:white;">DEPLOY BASIC ANALYTICS ($116)</div></a>', unsafe_allow_html=True)
-with col_p2:
-    st.markdown(f'<a href="{premium_doc_url}" style="text-decoration:none;"><div style="padding:20px; border:1px solid #ffd700; text-align:center; border-radius:10px; color:#ffd700;">DEPLOY PREMIUM ENTERPRISE ($399)</div></a>', unsafe_allow_html=True)
+p1, p2 = st.columns(2)
+with p1:
+    st.markdown('<div style="padding:30px; border:2px solid #ccc; border-radius:15px; text-align:center;">'
+                '<h3 style="color:#ccc;">BASIC ANALYTICS</h3><h1>$116</h1>'
+                '<p>Core Models Included</p></div>', unsafe_allow_html=True)
+    st.button("DEPLOY BASIC LICENSE", key="buy_basic")
 
-st.markdown("<br><p style='text-align:center; color:#444;'>BY SYSTEM INTELLIGENCE 2026 | AHSAN KHAN</p>", unsafe_allow_html=True)
+with p2:
+    st.markdown('<div style="padding:30px; border:2px solid #ffd700; border-radius:15px; text-align:center;">'
+                '<h3 style="color:#ffd700;">PREMIUM ENTERPRISE</h3><h1>$399</h1>'
+                '<p>Full Unlimited Access</p></div>', unsafe_allow_html=True)
+    st.button("DEPLOY PREMIUM LICENSE", key="buy_prem")
+
+st.markdown("<br><p style='text-align:center; color:#333;'>SYSTEM INTELLIGENCE © 2026 | AHSAN KHAN</p>", unsafe_allow_html=True)
